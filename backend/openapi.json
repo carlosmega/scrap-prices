@@ -1,0 +1,52 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "ConstruScan API",
+    "version": "0.1.0",
+    "description": "API de ConstruScan (Django Ninja)."
+  },
+  "paths": {
+    "/api/health": {
+      "get": {
+        "operationId": "apps_core_api_health",
+        "summary": "Health",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Estado del servicio. Estático, no toca la DB.",
+        "tags": [
+          "core"
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "HealthOut": {
+        "description": "Respuesta del endpoint de salud.",
+        "properties": {
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HealthOut",
+        "type": "object"
+      }
+    }
+  },
+  "servers": []
+}

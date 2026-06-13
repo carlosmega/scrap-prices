@@ -8,13 +8,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { HealthIndicator } from "@/features/health/components/health-indicator";
 import { env } from "@/lib/env";
 
 /**
- * Home placeholder de ConstruScan (F002).
+ * Home de ConstruScan.
  *
- * Server Component: solo renderiza estilos Tailwind y componentes shadcn.
- * NO consume la API todavía — el cliente HTTP tipado llega en F003.
+ * Server Component: compone estilos Tailwind y componentes shadcn. El consumo
+ * de `GET /api/health` ocurre en `<HealthIndicator />` (Client Component), de
+ * modo que el fetch sucede en el navegador y `pnpm build` no depende de que el
+ * backend esté arriba.
  */
 export default function Home() {
   return (
@@ -45,7 +48,8 @@ export default function Home() {
           />
           <Button disabled>Buscar</Button>
         </CardContent>
-        <CardFooter>
+        <CardFooter className="flex-col items-start gap-2">
+          <HealthIndicator />
           <p className="text-xs text-muted-foreground">
             Backend configurado en{" "}
             <code className="rounded bg-muted px-1 py-0.5 font-mono">
