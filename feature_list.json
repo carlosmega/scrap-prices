@@ -52,7 +52,7 @@
       "backend"
     ],
     "spec": "specs/F007-modelo-catalogo.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F008",
@@ -61,7 +61,7 @@
       "backend"
     ],
     "spec": "specs/F008-modelo-precios-scraping.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F009",
