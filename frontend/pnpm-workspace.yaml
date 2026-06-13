@@ -1,0 +1,7 @@
+# pnpm 11: allowBuilds reemplaza a onlyBuiltDependencies.
+# Aprueba explícitamente los build scripts nativos opcionales.
+# Sin esto, `pnpm install` falla con ERR_PNPM_IGNORED_BUILDS (strictDepBuilds=true).
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+  esbuild: true
