@@ -15,7 +15,7 @@
       "frontend"
     ],
     "spec": "specs/F002-bootstrap-frontend.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F003",
