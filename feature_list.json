@@ -1,0 +1,50 @@
+[
+  {
+    "id": "F001",
+    "titulo": "Bootstrap backend: Django + Django Ninja + Celery (esqueleto)",
+    "capas": [
+      "backend"
+    ],
+    "spec": "specs/F001-bootstrap-backend.md",
+    "status": "pending"
+  },
+  {
+    "id": "F002",
+    "titulo": "Bootstrap frontend: Next.js 15 + Tailwind + shadcn/ui",
+    "capas": [
+      "frontend"
+    ],
+    "spec": "specs/F002-bootstrap-frontend.md",
+    "status": "pending"
+  },
+  {
+    "id": "F003",
+    "titulo": "Pipeline de contrato: OpenAPI de Ninja -> tipos TypeScript",
+    "capas": [
+      "backend",
+      "frontend"
+    ],
+    "spec": "specs/F003-contrato-tipos.md",
+    "status": "pending"
+  },
+  {
+    "id": "F004",
+    "titulo": "Bootstrap E2E: Playwright + smoke test fullstack",
+    "capas": [
+      "e2e"
+    ],
+    "spec": "specs/F004-bootstrap-e2e.md",
+    "status": "pending"
+  },
+  {
+    "id": "F005",
+    "titulo": "CRUD de tareas (vertical slice de ejemplo)",
+    "capas": [
+      "backend",
+      "frontend",
+      "e2e"
+    ],
+    "spec": "specs/F005-tareas-crud.md",
+    "status": "pending"
+  }
+]
