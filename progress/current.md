@@ -2,15 +2,13 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F009** — Modelo M0: listas de cotización anónimas
-**Spec:** `specs/F009-modelo-listas-cotizacion.md`
+**Feature en curso:** ninguna
+**Plan:** —
+**Estado:** 🎉 **Bootstrap (F001–F004) + Modelo M0 (F006–F009) COMPLETOS.** Todas APROBADO 1er ciclo,
+`./init.sh` verde. El modelo de datos completo de ConstruScan existe: geografía/retailers, catálogo
+(+ matching SKU manual), precios/scraping (PriceObservation + ScrapeRun), listas de cotización anónimas.
+37 tests backend. Sin features `pending` en `feature_list.json`.
 
-## Plan F009 (capa única backend → implementer-backend)
-
-- `UserList` (lista de cotización; **anónima/sesión** — `user_fk` NO obligatorio en MVP, decisión de producto) y `UserListItem` (item con cantidad + snapshot de precio).
-- Heredan `apps.common.models.TimeStampedUUIDModel`. Migraciones commiteadas; Admin; tests.
-- Sin endpoints (contrato sin cambios). SQLite.
-
-Cierre: `./init.sh` verde + pytest/ruff/makemigrations --check limpios + review APROBADO.
-
-**Estado:** F009 `in_progress`. Cadena M0: F006 ✅ F007 ✅ F008 ✅ → **F009** (última de M0).
+**Siguiente milestone (PRD §13):** M1 (reconocimiento de retailers) / M2 (scrapers + adapters + Celery)
+/ M3 (API Ninja + matching) / M4 (UI) / M5 (hardening). Aún sin specs — se generan al arrancar cada uno.
+Recordar la estrategia de tests de scrapers (golden fixtures) y Celery eager de `docs/testing-strategy.md`.

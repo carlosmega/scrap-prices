@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "apps.geo",
     "apps.catalog",
     "apps.prices",
+    "apps.lists",
 ]
 
 # --- Middleware -------------------------------------------------------------
