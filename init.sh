@@ -150,6 +150,12 @@ if [ -f frontend/package.json ]; then
   run "pnpm install" pnpm install --silent
   run "tsc --noEmit" pnpm exec tsc --noEmit
   run "lint" pnpm lint
+  # Unit tests de frontend (vitest), solo si el script test:unit está definido.
+  if node -e "process.exit(((require('./package.json').scripts)||{})['test:unit']?0:1)" 2>/dev/null; then
+    run "tests unitarios (vitest)" pnpm test:unit
+  else
+    pend "sin script test:unit todavía (lo añade F002)"
+  fi
   if [ "$MODE" != "quick" ]; then
     run "build de producción" pnpm build
   else

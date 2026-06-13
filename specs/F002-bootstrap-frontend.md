@@ -20,8 +20,13 @@ Tailwind v4, shadcn/ui inicializado, estructura de carpetas conforme a
 2. `pnpm dlx shadcn@latest init` y añadir como base: button, card, input.
 3. Crear estructura: `src/features/`, `src/lib/api/` (vacía por ahora).
 4. Variable `NEXT_PUBLIC_API_URL` con default `http://localhost:8000`.
-5. Scripts en package.json: `dev`, `build`, `lint`, y `gen:api` placeholder.
-6. **Reglas ESLint de arquitectura** (mecánicas, no de prompt) en la config:
+5. Scripts en package.json: `dev`, `build`, `lint`, `gen:api` placeholder,
+   y `test:unit` (= `vitest run`, sin watch).
+6. **Vitest + Testing Library** para unit tests de componentes/hooks
+   (`vitest`, `@testing-library/react`, `@testing-library/jest-dom`, `jsdom`).
+   Config `vitest.config.ts` con entorno `jsdom`. Un test de humo (ej. la home
+   renderiza) que demuestre que el runner corre. Ver `docs/testing-strategy.md`.
+7. **Reglas ESLint de arquitectura** (mecánicas, no de prompt) en la config:
    - Prohibir `fetch(` fuera de `src/lib/api/client.ts` (p.ej.
      `no-restricted-syntax`/`no-restricted-globals` o `import/no-restricted-paths`).
    - `@typescript-eslint/no-explicit-any: error` (cero `any`).
@@ -33,6 +38,8 @@ Tailwind v4, shadcn/ui inicializado, estructura de carpetas conforme a
 - [ ] Frontend: la home renderiza con estilos Tailwind y un componente shadcn visible.
 - [ ] Frontend: las reglas ESLint de arquitectura están activas (un `fetch` fuera
       de `client.ts` o un `any` hacen fallar `pnpm lint`).
+- [ ] Frontend: `pnpm test:unit` (vitest run) pasa con al menos un test de humo;
+      el script existe en package.json (la Fase 4 de `init.sh` lo ejecuta).
 
 ## Plan de verificación
 ```bash

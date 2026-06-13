@@ -37,14 +37,39 @@
     "status": "pending"
   },
   {
-    "id": "F005",
-    "titulo": "CRUD de tareas (vertical slice de ejemplo)",
+    "id": "F006",
+    "titulo": "Modelo M0: base abstracta + geografia y retailers (Retailer, RetailerLocation, Zone, ZoneLocationMap) + Admin",
     "capas": [
-      "backend",
-      "frontend",
-      "e2e"
+      "backend"
     ],
-    "spec": "specs/F005-tareas-crud.md",
+    "spec": "specs/F006-modelo-geografia-retailers.md",
+    "status": "pending"
+  },
+  {
+    "id": "F007",
+    "titulo": "Modelo M0: catalogo (Category, CanonicalProduct, RetailerProduct) + curacion manual en Admin",
+    "capas": [
+      "backend"
+    ],
+    "spec": "specs/F007-modelo-catalogo.md",
+    "status": "pending"
+  },
+  {
+    "id": "F008",
+    "titulo": "Modelo M0: precios y auditoria de scraping (PriceObservation, ScrapeRun) + Admin",
+    "capas": [
+      "backend"
+    ],
+    "spec": "specs/F008-modelo-precios-scraping.md",
+    "status": "pending"
+  },
+  {
+    "id": "F009",
+    "titulo": "Modelo M0: listas de cotizacion anonimas (UserList, UserListItem) + Admin",
+    "capas": [
+      "backend"
+    ],
+    "spec": "specs/F009-modelo-listas-cotizacion.md",
     "status": "pending"
   }
 ]

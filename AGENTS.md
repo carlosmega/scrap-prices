@@ -11,6 +11,7 @@ No leas todo de golpe. Busca lo que necesitas cuando lo necesitas:
 | Convenciones Django/Ninja              | `docs/conventions-backend.md` + `backend/CLAUDE.md`|
 | Convenciones Next/Tailwind/shadcn      | `docs/conventions-frontend.md` + `frontend/CLAUDE.md` |
 | Cómo demostrar que algo funciona       | `docs/verification.md`                             |
+| Estrategia de pruebas (pirámide)        | `docs/testing-strategy.md`                         |
 | Qué MCP hay y quién puede usarlos      | `docs/mcp.md`                                      |
 | Estado de la sesión actual             | `progress/current.md`                              |
 | Qué pasó en sesiones anteriores        | `progress/history.md`                              |
