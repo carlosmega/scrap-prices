@@ -34,7 +34,7 @@
       "e2e"
     ],
     "spec": "specs/F004-bootstrap-e2e.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F006",

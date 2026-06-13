@@ -1,0 +1,13 @@
+{
+  "name": "construscan-e2e",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Suite E2E (Playwright) de ConstruScan. Levanta backend (SQLite) y frontend vía webServer y ejerce el flujo feliz.",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.60.0"
+  }
+}
