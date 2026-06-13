@@ -37,7 +37,7 @@ backend/
 ├── pyproject.toml       # deps + [tool.pytest.ini_options] (DJANGO_SETTINGS_MODULE) + reglas de capas
 ├── manage.py
 ├── config/
-│   ├── settings.py      # DATABASE_URL, REDIS_URL y CORS_ALLOWED_ORIGINS desde env;
+│   ├── settings.py      # DATABASE_URL (default SQLite), REDIS_URL y CORS_ALLOWED_ORIGINS desde env;
 │   │                    #   INSTALLED_APPS incluye 'ninja' y 'corsheaders'
 │   ├── api.py           # instancia NinjaAPI llamada `api` + routers
 │   ├── urls.py          # monta api en /api/
@@ -69,7 +69,7 @@ backend/
 - [ ] Backend: `uv run python manage.py export_openapi_schema --api config.api.api`
       funciona (requiere `'ninja'` en `INSTALLED_APPS`).
 - [ ] Backend: `uv run ruff check .` limpio; `makemigrations --check` limpio.
-- [ ] Backend: el server arranca contra el Postgres de docker-compose con los defaults.
+- [ ] Backend: el server arranca contra SQLite con los defaults (sin Docker; Postgres es migración posterior).
 - [ ] Backend: `corsheaders` configurado; `CORS_ALLOWED_ORIGINS` desde env con
       default `http://localhost:3000`.
 - [ ] Backend: regla de capas mecánica activa (import-linter o ruff banned-api);

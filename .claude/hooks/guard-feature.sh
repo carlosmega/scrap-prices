@@ -45,7 +45,7 @@ fi
 
 # Normalizar separadores Windows '\' -> '/' (bs aislado para no pelear con el escape).
 bs='\'
-F=$(printf '%s' "$FILE" | tr "$bs" '/' 2>/dev/null)
+F=$(printf '%s' "$FILE" | tr "$bs" '/' 2>/dev/null | tr -s '/')
 
 # --- ¿Pertenece a una CAPA de código? (detección por segmento) ---------------
 CAPA=""

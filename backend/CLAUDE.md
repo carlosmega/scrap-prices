@@ -12,4 +12,6 @@ esto es lo no negociable:
 5. Verificación local mínima antes de reportar:
    `uv run ruff check . && uv run python manage.py makemigrations --check --dry-run && uv run pytest -q`
 
-Postgres y Redis vienen del docker-compose de la raíz (`docker compose up -d`).
+MVP: el backend corre con **SQLite** (`DATABASE_URL=sqlite:///db.sqlite3`) y
+**sin Docker**. Postgres y Redis (docker-compose de la raíz) son migración
+posterior, no requerida ahora. Celery no se ejercita en MVP (no hay broker).

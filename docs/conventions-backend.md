@@ -25,8 +25,9 @@ backend/apps/<dominio>/
    devolver dicts sueltos: el contrato OpenAPI sale de los schemas.
 3. Migraciones SIEMPRE commiteadas en el mismo cambio que el modelo.
    `makemigrations --check` en init.sh lo vigila.
-4. Settings leen de variables de entorno con defaults locales que apuntan
-   al docker-compose del repo (`DATABASE_URL`, `REDIS_URL`, `CORS_ALLOWED_ORIGINS`).
+4. Settings leen de variables de entorno con defaults locales. En MVP
+   `DATABASE_URL` por defecto es **SQLite** (`sqlite:///db.sqlite3`), **sin Docker**;
+   Postgres es migración posterior. `REDIS_URL`/`CORS_ALLOWED_ORIGINS` también desde env.
 5. Si cambias schemas o rutas: regenera `backend/openapi.json` antes de
    reportar (ver `docs/architecture.md`, flujo contract-first).
 

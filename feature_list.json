@@ -6,7 +6,7 @@
       "backend"
     ],
     "spec": "specs/F001-bootstrap-backend.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F002",

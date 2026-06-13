@@ -15,11 +15,11 @@ runserver`) y frontend (`pnpm dev`), un smoke test.
 2. El indicador de salud de la API muestra "ok" (requiere F003).
 
 ## Criterios de aceptación
-- [ ] E2E: `pnpm test:e2e` desde `e2e/` levanta todo y pasa en local con docker compose arriba.
+- [ ] E2E: `pnpm test:e2e` desde `e2e/` levanta todo y pasa en local (backend SQLite + frontend; sin Docker).
 - [ ] E2E: `./init.sh --e2e` ejecuta la Fase 6 en verde.
 - [ ] E2E: el reporte HTML de Playwright queda en e2e/playwright-report (gitignored).
 
 ## Plan de verificación
 ```bash
-docker compose up -d && ./init.sh --e2e
+./init.sh --e2e   # SQLite por defecto; no requiere Docker
 ```

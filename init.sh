@@ -44,11 +44,13 @@ run() { # run "descripcion" comando...
 
 # --- Fase 0: herramientas ----------------------------------------------------
 fase "Fase 0 · Herramientas"
-for t in git jq; do
+# Obligatorias: git (repo) y node (parseo JSON del arnés; siempre en el stack).
+for t in git node; do
   command -v "$t" >/dev/null 2>&1 && ok "$t disponible" || bad "$t es obligatorio para el arnés"
 done
-for t in docker uv node pnpm; do
-  command -v "$t" >/dev/null 2>&1 && ok "$t disponible" || pend "$t no encontrado (necesario al bootstrapear su capa)"
+# Opcionales: jq (node lo cubre), docker (MVP usa SQLite), uv/pnpm (al bootstrapear su capa).
+for t in jq uv docker pnpm; do
+  command -v "$t" >/dev/null 2>&1 && ok "$t disponible" || pend "$t no encontrado (opcional / al bootstrapear su capa)"
 done
 # El binario git no basta: el reviewer y el criterio de contrato necesitan un REPO.
 if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -64,43 +66,55 @@ for f in CLAUDE.md AGENTS.md CHECKPOINTS.md feature_list.json specs/TEMPLATE.md 
   [ -f "$f" ] && ok "existe $f" || bad "falta $f"
 done
 
-if jq -e 'type == "array"' feature_list.json >/dev/null 2>&1; then
+# feature_list.json: validación tolerante a herramientas (jq si está; si no, node).
+fl_array=0; IN_PROGRESS=0; BAD_STATUS=0; DONE_IDS=""
+if command -v jq >/dev/null 2>&1; then
+  jq -e 'type == "array"' feature_list.json >/dev/null 2>&1 && fl_array=1
+  IN_PROGRESS=$(jq '[.[] | select(.status=="in_progress")] | length' feature_list.json 2>/dev/null)
+  BAD_STATUS=$(jq -r '[.[] | select(.status != "pending" and .status != "in_progress" and .status != "done")] | length' feature_list.json 2>/dev/null)
+  DONE_IDS=$(jq -r '.[] | select(.status=="done") | .id' feature_list.json 2>/dev/null)
+elif command -v node >/dev/null 2>&1; then
+  fl_array=$(node -e "try{process.stdout.write(Array.isArray(require('./feature_list.json'))?'1':'0')}catch(e){process.stdout.write('0')}")
+  IN_PROGRESS=$(node -e "try{const a=require('./feature_list.json');process.stdout.write(String(a.filter(f=>f.status==='in_progress').length))}catch(e){process.stdout.write('0')}")
+  BAD_STATUS=$(node -e "try{const a=require('./feature_list.json');const ok=['pending','in_progress','done'];process.stdout.write(String(a.filter(f=>!ok.includes(f.status)).length))}catch(e){process.stdout.write('0')}")
+  DONE_IDS=$(node -e "try{const a=require('./feature_list.json');process.stdout.write(a.filter(f=>f.status==='done').map(f=>f.id).join('\n'))}catch(e){}")
+fi
+
+if [ "$fl_array" = "1" ]; then
   ok "feature_list.json es JSON válido (array)"
-  IN_PROGRESS=$(jq '[.[] | select(.status=="in_progress")] | length' feature_list.json)
-  if [ "$IN_PROGRESS" -le 1 ]; then
+  if [ "${IN_PROGRESS:-0}" -le 1 ]; then
     ok "features in_progress: $IN_PROGRESS (máximo 1)"
   else
     bad "hay $IN_PROGRESS features in_progress; el arnés exige una a la vez"
   fi
-  BAD_STATUS=$(jq -r '[.[] | select(.status != "pending" and .status != "in_progress" and .status != "done")] | length' feature_list.json)
-  [ "$BAD_STATUS" -eq 0 ] && ok "todos los status son válidos" || bad "$BAD_STATUS feature(s) con status inválido"
+  [ "${BAD_STATUS:-0}" -eq 0 ] && ok "todos los status son válidos" || bad "$BAD_STATUS feature(s) con status inválido"
 else
-  bad "feature_list.json no es JSON válido"
+  bad "feature_list.json no es JSON válido (ni jq ni node pudieron leerlo)"
 fi
 
 [ -x .claude/hooks/guard-feature.sh ] && ok "hook guard-feature.sh ejecutable" || bad "hook guard-feature.sh no ejecutable (chmod +x)"
 
 # Gate done <- review: toda feature 'done' exige su review APROBADO (mecánico).
-if command -v jq >/dev/null 2>&1; then
-  miss=0; ndone=0
-  for id in $(jq -r '.[] | select(.status=="done") | .id' feature_list.json 2>/dev/null); do
-    ndone=$((ndone+1))
-    if [ -f "progress/review_${id}.md" ] && head -n1 "progress/review_${id}.md" | grep -qi "Veredicto: APROBADO"; then
-      :
-    else
-      bad "feature $id está 'done' sin progress/review_${id}.md con 'Veredicto: APROBADO'"
-      miss=$((miss+1))
-    fi
-  done
-  if [ "$ndone" -eq 0 ]; then
-    ok "sin features 'done' que auditar todavía"
-  elif [ "$miss" -eq 0 ]; then
-    ok "las $ndone feature(s) 'done' tienen review APROBADO"
+miss=0; ndone=0
+for id in $DONE_IDS; do
+  ndone=$((ndone+1))
+  if [ -f "progress/review_${id}.md" ] && head -n1 "progress/review_${id}.md" | grep -qi "Veredicto: APROBADO"; then
+    :
+  else
+    bad "feature $id está 'done' sin progress/review_${id}.md con 'Veredicto: APROBADO'"
+    miss=$((miss+1))
   fi
+done
+if [ "$ndone" -eq 0 ]; then
+  ok "sin features 'done' que auditar todavía"
+elif [ "$miss" -eq 0 ]; then
+  ok "las $ndone feature(s) 'done' tienen review APROBADO"
 fi
 
 # --- Fase 2: infraestructura --------------------------------------------------
-fase "Fase 2 · Infraestructura (Postgres + Redis)"
+# MVP corre con SQLite y sin Docker. Esta fase solo actúa si Docker está presente
+# (ruta de migración a Postgres); si no, se reporta como no requerida, sin fallar.
+fase "Fase 2 · Infraestructura (Postgres + Redis — opcional, migración futura)"
 if [ "$MODE" = "quick" ]; then
   pend "saltada en modo --quick"
 elif command -v docker >/dev/null 2>&1; then
@@ -117,7 +131,7 @@ elif command -v docker >/dev/null 2>&1; then
     bad "docker compose up falló"
   fi
 else
-  pend "docker no disponible"
+  pend "Docker no usado en MVP (backend corre con SQLite); infra Postgres/Redis diferida"
 fi
 
 # --- Fase 3: backend -----------------------------------------------------------

@@ -62,8 +62,8 @@ false). `unique_together = (zone, retailer_location)`.
 ## Criterios de aceptación
 
 - [ ] **Backend:** las 4 entidades + base abstracta en `apps/<app>/models.py`;
-      `makemigrations` genera migración y `migrate` corre limpio contra el
-      Postgres de docker-compose.
+      `makemigrations` genera migración y `migrate` corre limpio contra
+      SQLite (default del MVP; sin Docker).
 - [ ] **Backend:** las 4 entidades registradas en `admin.py` y visibles/editables
       en `/admin/` (con `list_display` y `list_filter` razonables; al menos
       `scraper_status` filtrable en Retailer).
@@ -78,8 +78,7 @@ false). `unique_together = (zone, retailer_location)`.
 ## Plan de verificación
 
 ```bash
-docker compose up -d
-cd backend && uv run python manage.py migrate
+cd backend && uv run python manage.py migrate   # SQLite por defecto, sin Docker
 uv run pytest apps -q
 uv run ruff check . && uv run python manage.py makemigrations --check --dry-run
 # Crear superuser y verificar Admin navegable manualmente en /admin/
