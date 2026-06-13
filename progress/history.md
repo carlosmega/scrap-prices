@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-13 · **F006** Modelo M0 geo/retailers (base abstracta `TimeStampedUUIDModel` en apps/common; Retailer/RetailerLocation/Zone/ZoneLocationMap en apps/geo + Admin) · APROBADO 1er ciclo · `./init.sh` verde (31 ok). 6 tests (relaciones, unique_together, soft-delete). Migración commiteada. Informe `impl_F006_backend.md`, review `review_F006.md`.
 - 2026-06-13 · **F004** Bootstrap E2E (Playwright + smoke fullstack; webServer levanta backend SQLite + frontend) · APROBADO 1er ciclo · `./init.sh --e2e` verde (33 ok, las 6 fases). Smoke ejercita el lazo real (home + indicador salud "ok"). **🎉 Bootstrap F001–F004 completo.** Informe `impl_F004_e2e.md`, review `review_F004.md`.
 - 2026-06-13 · **F003** Pipeline de contrato (openapi.json → schema.d.ts → client.ts tipado; home consume /api/health client-side con 3 estados) · APROBADO 1er ciclo · `./init.sh` verde (31 ok), **Fase 5 sin drift**. Cero tipos de API a mano. Deuda cosmética: placeholder viejo en page.tsx (se limpia en M4). Informes `impl_F003_{backend,frontend}.md`, review `review_F003.md`.
 - 2026-06-13 · **F002** Bootstrap frontend (Next.js 15.5.19 + Tailwind v4 + shadcn button/card/input + Vitest) · APROBADO 1er ciclo · `./init.sh` verde (30 ok). ESLint de arquitectura muerde (no `fetch` fuera de client.ts, cero `any`). Resuelto pnpm 11 `allowBuilds`. Informe `impl_F002_frontend.md`, review `review_F002.md`.

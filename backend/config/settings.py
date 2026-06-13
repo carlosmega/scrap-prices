@@ -45,6 +45,8 @@ INSTALLED_APPS = [
     "corsheaders",
     # Apps del dominio
     "apps.core",
+    "apps.common",
+    "apps.geo",
 ]
 
 # --- Middleware -------------------------------------------------------------
