@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-13 · **F008** Modelo M0 precios/scraping (PriceObservation Decimal + índice compuesto (retailer_product,zone,-captured_at); ScrapeRun auditoría; helper `ultima_observacion` en services.py) · APROBADO 1er ciclo · `./init.sh` verde. 9 tests. Migración commiteada. Informe `impl_F008_backend.md`, review `review_F008.md`.
 - 2026-06-13 · **F007** Modelo M0 catálogo (Category/CanonicalProduct/RetailerProduct; matching SKU manual en Admin con autocomplete; on_delete CASCADE/PROTECT/SET_NULL) · APROBADO 1er ciclo · `./init.sh` verde (31 ok). 9 tests. Migración commiteada. Informe `impl_F007_backend.md`, review `review_F007.md`.
 - 2026-06-13 · **F006** Modelo M0 geo/retailers (base abstracta `TimeStampedUUIDModel` en apps/common; Retailer/RetailerLocation/Zone/ZoneLocationMap en apps/geo + Admin) · APROBADO 1er ciclo · `./init.sh` verde (31 ok). 6 tests (relaciones, unique_together, soft-delete). Migración commiteada. Informe `impl_F006_backend.md`, review `review_F006.md`.
 - 2026-06-13 · **F004** Bootstrap E2E (Playwright + smoke fullstack; webServer levanta backend SQLite + frontend) · APROBADO 1er ciclo · `./init.sh --e2e` verde (33 ok, las 6 fases). Smoke ejercita el lazo real (home + indicador salud "ok"). **🎉 Bootstrap F001–F004 completo.** Informe `impl_F004_e2e.md`, review `review_F004.md`.

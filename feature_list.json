@@ -61,7 +61,7 @@
       "backend"
     ],
     "spec": "specs/F008-modelo-precios-scraping.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F009",
@@ -70,6 +70,6 @@
       "backend"
     ],
     "spec": "specs/F009-modelo-listas-cotizacion.md",
-    "status": "pending"
+    "status": "in_progress"
   }
 ]

@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "apps.common",
     "apps.geo",
     "apps.catalog",
+    "apps.prices",
 ]
 
 # --- Middleware -------------------------------------------------------------
