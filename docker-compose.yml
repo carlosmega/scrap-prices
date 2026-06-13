@@ -1,3 +1,9 @@
+# NO USADO EN EL MVP. El MVP corre con SQLite y sin Docker (decisión del equipo,
+# 2026-06-13: iteración más rápida). Este compose es el DESTINO de la migración
+# futura a Postgres/Redis: al migrar, levantar con `docker compose up -d` y apuntar
+# DATABASE_URL/REDIS_URL aquí. `init.sh` Fase 2 lo trata como opcional (no falla si
+# no está arriba). NO levantarlo para desarrollar el MVP.
+#
 # Infraestructura local del arnés: solo datos, las apps corren nativas
 # (mas rapido para el ciclo de iteracion del agente).
 services:

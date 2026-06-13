@@ -5,6 +5,10 @@ __pycache__/
 .pytest_cache/
 .ruff_cache/
 
+# Base de datos local (SQLite del MVP; Postgres es migración posterior)
+*.sqlite3
+db.sqlite3
+
 # Node
 node_modules/
 .next/

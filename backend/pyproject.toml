@@ -1,0 +1,73 @@
+[project]
+name = "backend"
+version = "0.1.0"
+description = "ConstruScan backend — Django + Django Ninja + Celery"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=5.1",
+    "django-ninja>=1.3",
+    "celery[redis]>=5.4",
+    "django-environ>=0.11",
+    "django-cors-headers>=4.4",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3",
+    "pytest-django>=4.9",
+    "ruff>=0.6",
+    "import-linter>=2.0",
+]
+
+# ---------------------------------------------------------------------------
+# pytest: uv run pytest NO pasa por manage.py, así que el settings module se
+# fija aquí. Sin esto pytest falla con "Django settings not configured".
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py"]
+testpaths = ["apps"]
+addopts = "-q"
+
+# ---------------------------------------------------------------------------
+# ruff: lint + formato. flake8-tidy-imports veta llamadas al ORM/Django HTTP
+# en los routers (api.py) de forma mecánica (regla de capas, refuerzo de
+# import-linter). La selección base cubre estilo, imports y errores comunes.
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+extend-exclude = ["**/migrations/*"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "DJ", "TID"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
+
+# En los routers de Ninja (api.py) está prohibido tocar el ORM o HTTP de
+# Django directamente: la lógica vive en services.py. Esta regla por-archivo
+# prohíbe importar el ORM/HTTP de Django dentro de cualquier api.py.
+[tool.ruff.lint.flake8-tidy-imports.banned-api]
+"django.db.models".msg = "Routers (api.py) no tocan el ORM: la lógica vive en services.py."
+"django.http".msg = "Routers (api.py) no construyen HttpResponse a mano: usa schemas y delega en services.py."
+
+[tool.ruff.lint.per-file-ignores]
+# La prohibición de ORM/HTTP solo aplica a los routers (api.py). El resto del
+# código (services, models, config) puede usar el ORM y HTTP libremente.
+"!**/api.py" = ["TID251"]
+
+# ---------------------------------------------------------------------------
+# import-linter: contrato de capas. El router (api) no puede importar el ORM
+# de modelos directamente; el flujo es api -> services -> models.
+# Se ejecuta con: uv run lint-imports
+# ---------------------------------------------------------------------------
+[tool.importlinter]
+root_packages = ["apps", "config"]
+
+[[tool.importlinter.contracts]]
+name = "Routers (api) no importan models directamente; delegan en services"
+type = "forbidden"
+source_modules = ["apps.*.api"]
+forbidden_modules = ["apps.*.models"]
+allow_indirect_imports = true
