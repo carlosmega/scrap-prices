@@ -88,7 +88,7 @@
     "titulo": "M3 API: listas de cotizacion (CRUD /api/lists + items, anonimo/sesion)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F017-api-listas.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F018",

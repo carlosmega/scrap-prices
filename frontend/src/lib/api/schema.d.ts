@@ -109,6 +109,102 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/lists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar Listas
+         * @description Lista las listas de la sesión (`X-Session-Key`). 400 sin header.
+         */
+        get: operations["apps_lists_api_listar_listas"];
+        put?: never;
+        /**
+         * Crear Lista
+         * @description Crea una lista para la sesión. 400 sin header; 422 cuerpo inválido.
+         */
+        post: operations["apps_lists_api_crear_lista"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/{list_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalle Lista
+         * @description Detalle de una lista de la sesión (ítems + subtotal/total). 400 sin header; 404 ajena.
+         */
+        get: operations["apps_lists_api_detalle_lista"];
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar Lista
+         * @description Borra una lista de la sesión (sin body). 400 sin header; 404 si no es suya; 204 si ok.
+         */
+        delete: operations["apps_lists_api_eliminar_lista"];
+        options?: never;
+        head?: never;
+        /**
+         * Actualizar Lista
+         * @description Actualiza nombre y/o zona de una lista de la sesión. 400 sin header; 404 si no es suya.
+         */
+        patch: operations["apps_lists_api_actualizar_lista"];
+        trace?: never;
+    };
+    "/api/lists/{list_id}/items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Agregar Item
+         * @description Agrega un SKU con snapshot inmutable. 400 sin header; 404 lista/SKU; 422 sin precio.
+         */
+        post: operations["apps_lists_api_agregar_item"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/lists/{list_id}/items/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Eliminar Item
+         * @description Quita un ítem de la lista de la sesión (sin body). 400 sin header; 404; 204 si ok.
+         */
+        delete: operations["apps_lists_api_eliminar_item"];
+        options?: never;
+        head?: never;
+        /**
+         * Actualizar Item
+         * @description Cambia la cantidad de un ítem (el snapshot no se toca). 400 sin header; 404; 422 cantidad.
+         */
+        patch: operations["apps_lists_api_actualizar_item"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -265,6 +361,128 @@ export interface components {
             /** History */
             history: components["schemas"]["PriceHistoryPointOut"][];
         };
+        /**
+         * UserListOut
+         * @description Lista de cotización (resumen): metadatos + conteo de ítems.
+         *
+         *     `zone_id` es None cuando la lista aún no tiene zona asignada. `item_count`
+         *     es la cantidad de ítems (filas), no la suma de cantidades.
+         */
+        UserListOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Zone Id */
+            zone_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Item Count */
+            item_count: number;
+        };
+        /**
+         * UserListCreateIn
+         * @description Cuerpo de POST /lists: nombre obligatorio y zona opcional.
+         */
+        UserListCreateIn: {
+            /** Name */
+            name: string;
+            /** Zone Id */
+            zone_id?: string | null;
+        };
+        /**
+         * UserListDetailOut
+         * @description Detalle de una lista: el resumen + sus ítems y los totales calculados.
+         *
+         *     `subtotal`/`total` reutilizan `services.subtotal_lista` (F009); en el MVP no
+         *     hay impuestos ni envío, así que `total == subtotal`. Decimales como string.
+         */
+        UserListDetailOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Zone Id */
+            zone_id?: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Item Count */
+            item_count: number;
+            /** Items */
+            items: components["schemas"]["UserListItemOut"][];
+            /** Subtotal */
+            subtotal: string;
+            /** Total */
+            total: string;
+        };
+        /**
+         * UserListItemOut
+         * @description Ítem de una lista: SKU, cantidad y snapshot inmutable del precio.
+         *
+         *     `captured_price`/`captured_at` son el snapshot que se fijó al agregar el ítem
+         *     y NUNCA cambian después (CA2 de C1). `line_total = quantity * captured_price`.
+         *     Los `Decimal` se serializan como string por exactitud monetaria (PRD §8).
+         */
+        UserListItemOut: {
+            /** Id */
+            id: string;
+            /** Retailer Product Id */
+            retailer_product_id: string;
+            retailer: components["schemas"]["RetailerRefOut"];
+            /** Product Name */
+            product_name: string;
+            /** Quantity */
+            quantity: number;
+            /** Captured Price */
+            captured_price: string;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+            /** Line Total */
+            line_total: string;
+        };
+        /**
+         * UserListPatchIn
+         * @description Cuerpo de PATCH /lists/{id}: campos opcionales (parcial).
+         *
+         *     `zone_id` admite tres estados: ausente (no tocar), una zona, o None explícito
+         *     (desasignar la zona).
+         */
+        UserListPatchIn: {
+            /** Name */
+            name?: string | null;
+            /** Zone Id */
+            zone_id?: string | null;
+        };
+        /**
+         * UserListItemCreateIn
+         * @description Cuerpo de POST /lists/{id}/items: SKU + cantidad (>= 1).
+         */
+        UserListItemCreateIn: {
+            /** Retailer Product Id */
+            retailer_product_id: string;
+            /**
+             * Quantity
+             * @default 1
+             */
+            quantity: number;
+        };
+        /**
+         * UserListItemPatchIn
+         * @description Cuerpo de PATCH /lists/{id}/items/{item_id}: nueva cantidad (>= 1).
+         */
+        UserListItemPatchIn: {
+            /** Quantity */
+            quantity: number;
+        };
     };
     responses: never;
     parameters: never;
@@ -382,6 +600,208 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProductDetailOut"];
+                };
+            };
+        };
+    };
+    apps_lists_api_listar_listas: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListOut"][];
+                };
+            };
+        };
+    };
+    apps_lists_api_crear_lista: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserListCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListOut"];
+                };
+            };
+        };
+    };
+    apps_lists_api_detalle_lista: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListDetailOut"];
+                };
+            };
+        };
+    };
+    apps_lists_api_eliminar_lista: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    apps_lists_api_actualizar_lista: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserListPatchIn"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListOut"];
+                };
+            };
+        };
+    };
+    apps_lists_api_agregar_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserListItemCreateIn"];
+            };
+        };
+        responses: {
+            /** @description Created */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListItemOut"];
+                };
+            };
+        };
+    };
+    apps_lists_api_eliminar_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description No Content */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    apps_lists_api_actualizar_item: {
+        parameters: {
+            query?: never;
+            header?: {
+                x_session_key?: string | null;
+            };
+            path: {
+                list_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UserListItemPatchIn"];
+            };
+        };
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UserListItemOut"];
                 };
             };
         };

@@ -186,6 +186,420 @@
           "catalog"
         ]
       }
+    },
+    "/api/lists": {
+      "get": {
+        "operationId": "apps_lists_api_listar_listas",
+        "summary": "Listar Listas",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UserListOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lista las listas de la sesión (`X-Session-Key`). 400 sin header.",
+        "tags": [
+          "lists"
+        ]
+      },
+      "post": {
+        "operationId": "apps_lists_api_crear_lista",
+        "summary": "Crear Lista",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Crea una lista para la sesión. 400 sin header; 422 cuerpo inválido.",
+        "tags": [
+          "lists"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserListCreateIn"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/lists/{list_id}": {
+      "get": {
+        "operationId": "apps_lists_api_detalle_lista",
+        "summary": "Detalle Lista",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListDetailOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Detalle de una lista de la sesión (ítems + subtotal/total). 400 sin header; 404 ajena.",
+        "tags": [
+          "lists"
+        ]
+      },
+      "patch": {
+        "operationId": "apps_lists_api_actualizar_lista",
+        "summary": "Actualizar Lista",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Actualiza nombre y/o zona de una lista de la sesión. 400 sin header; 404 si no es suya.",
+        "tags": [
+          "lists"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserListPatchIn"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "operationId": "apps_lists_api_eliminar_lista",
+        "summary": "Eliminar Lista",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "description": "Borra una lista de la sesión (sin body). 400 sin header; 404 si no es suya; 204 si ok.",
+        "tags": [
+          "lists"
+        ]
+      }
+    },
+    "/api/lists/{list_id}/items": {
+      "post": {
+        "operationId": "apps_lists_api_agregar_item",
+        "summary": "Agregar Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListItemOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Agrega un SKU con snapshot inmutable. 400 sin header; 404 lista/SKU; 422 sin precio.",
+        "tags": [
+          "lists"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserListItemCreateIn"
+              }
+            }
+          },
+          "required": true
+        }
+      }
+    },
+    "/api/lists/{list_id}/items/{item_id}": {
+      "patch": {
+        "operationId": "apps_lists_api_actualizar_item",
+        "summary": "Actualizar Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListItemOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Cambia la cantidad de un ítem (el snapshot no se toca). 400 sin header; 404; 422 cantidad.",
+        "tags": [
+          "lists"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserListItemPatchIn"
+              }
+            }
+          },
+          "required": true
+        }
+      },
+      "delete": {
+        "operationId": "apps_lists_api_eliminar_item",
+        "summary": "Eliminar Item",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "list_id",
+            "schema": {
+              "title": "List Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "schema": {
+              "title": "Item Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "header",
+            "name": "x_session_key",
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "X Session Key"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "description": "Quita un ítem de la lista de la sesión (sin body). 400 sin header; 404; 204 si ok.",
+        "tags": [
+          "lists"
+        ]
+      }
     }
   },
   "components": {
@@ -475,6 +889,248 @@
           "history"
         ],
         "title": "ProductDetailOut",
+        "type": "object"
+      },
+      "UserListOut": {
+        "description": "Lista de cotización (resumen): metadatos + conteo de ítems.\n\n`zone_id` es None cuando la lista aún no tiene zona asignada. `item_count`\nes la cantidad de ítems (filas), no la suma de cantidades.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "item_count"
+        ],
+        "title": "UserListOut",
+        "type": "object"
+      },
+      "UserListCreateIn": {
+        "description": "Cuerpo de POST /lists: nombre obligatorio y zona opcional.",
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "UserListCreateIn",
+        "type": "object"
+      },
+      "UserListDetailOut": {
+        "description": "Detalle de una lista: el resumen + sus ítems y los totales calculados.\n\n`subtotal`/`total` reutilizan `services.subtotal_lista` (F009); en el MVP no\nhay impuestos ni envío, así que `total == subtotal`. Decimales como string.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "item_count": {
+            "title": "Item Count",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/UserListItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "subtotal": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Subtotal",
+            "type": "string"
+          },
+          "total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "created_at",
+          "item_count",
+          "items",
+          "subtotal",
+          "total"
+        ],
+        "title": "UserListDetailOut",
+        "type": "object"
+      },
+      "UserListItemOut": {
+        "description": "Ítem de una lista: SKU, cantidad y snapshot inmutable del precio.\n\n`captured_price`/`captured_at` son el snapshot que se fijó al agregar el ítem\ny NUNCA cambian después (CA2 de C1). `line_total = quantity * captured_price`.\nLos `Decimal` se serializan como string por exactitud monetaria (PRD §8).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "retailer_product_id": {
+            "title": "Retailer Product Id",
+            "type": "string"
+          },
+          "retailer": {
+            "$ref": "#/components/schemas/RetailerRefOut"
+          },
+          "product_name": {
+            "title": "Product Name",
+            "type": "string"
+          },
+          "quantity": {
+            "title": "Quantity",
+            "type": "integer"
+          },
+          "captured_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Captured Price",
+            "type": "string"
+          },
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          },
+          "line_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Line Total",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "retailer_product_id",
+          "retailer",
+          "product_name",
+          "quantity",
+          "captured_price",
+          "captured_at",
+          "line_total"
+        ],
+        "title": "UserListItemOut",
+        "type": "object"
+      },
+      "UserListPatchIn": {
+        "description": "Cuerpo de PATCH /lists/{id}: campos opcionales (parcial).\n\n`zone_id` admite tres estados: ausente (no tocar), una zona, o None explícito\n(desasignar la zona).",
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "zone_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zone Id"
+          }
+        },
+        "title": "UserListPatchIn",
+        "type": "object"
+      },
+      "UserListItemCreateIn": {
+        "description": "Cuerpo de POST /lists/{id}/items: SKU + cantidad (>= 1).",
+        "properties": {
+          "retailer_product_id": {
+            "title": "Retailer Product Id",
+            "type": "string"
+          },
+          "quantity": {
+            "default": 1,
+            "minimum": 1,
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "retailer_product_id"
+        ],
+        "title": "UserListItemCreateIn",
+        "type": "object"
+      },
+      "UserListItemPatchIn": {
+        "description": "Cuerpo de PATCH /lists/{id}/items/{item_id}: nueva cantidad (>= 1).",
+        "properties": {
+          "quantity": {
+            "minimum": 1,
+            "title": "Quantity",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "quantity"
+        ],
+        "title": "UserListItemPatchIn",
         "type": "object"
       }
     }
