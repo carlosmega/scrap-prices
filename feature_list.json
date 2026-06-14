@@ -109,14 +109,14 @@
     "titulo": "M4 UI: busqueda + resultados comparados por retailer (frescura, orden por precio)",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F020-ui-busqueda-resultados.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F021",
     "titulo": "M4 UI: detalle de producto + historial de precio",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F021-ui-detalle-producto.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F022",

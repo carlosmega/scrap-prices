@@ -40,6 +40,22 @@ type PatchPaths = PathsWith<"patch">;
 type DeletePaths = PathsWith<"delete">;
 
 /**
+ * Parámetros de query de un GET, derivados del contrato. Resuelve a `never`
+ * cuando la operación no declara `query` (p.ej. `/api/zones`); en ese caso el
+ * helper `apiGetQuery` no es aplicable y se usa `apiGet`.
+ */
+type GetQuery<P extends GetPaths> = paths[P]["get"] extends {
+  parameters: { query: infer Q };
+}
+  ? Q
+  : never;
+
+/** Solo las rutas GET cuya operación declara parámetros de query obligatorios. */
+type GetPathsWithQuery = {
+  [P in GetPaths]: [GetQuery<P>] extends [never] ? never : P;
+}[GetPaths];
+
+/**
  * JSON de la respuesta exitosa (200 o 201) de un método/ruta, derivado del
  * contrato. Si la respuesta no tiene cuerpo JSON (p.ej. 204), resuelve a
  * `never` aquí; los helpers sin cuerpo (DELETE) lo tratan aparte.
@@ -94,6 +110,22 @@ export class ApiError extends Error {
 function buildUrl(path: string): string {
   const base = env.apiUrl.replace(/\/+$/, "");
   return `${base}${path}`;
+}
+
+/**
+ * Serializa un objeto de query params (tipado por el contrato) a `?a=1&b=2`.
+ * Omite valores `undefined`/`null` y convierte el resto a string. Devuelve "" si
+ * no queda ningún parámetro, para no dejar un `?` colgando.
+ */
+function buildQueryString(query: Record<string, unknown>): string {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null) {
+      params.append(key, String(value));
+    }
+  }
+  const serialized = params.toString();
+  return serialized ? `?${serialized}` : "";
 }
 
 /**
@@ -165,6 +197,23 @@ export async function apiGet<P extends GetPaths>(
   options?: ApiRequestOptions
 ): Promise<GetJson200<P>> {
   const response = await request(path, "GET", undefined, options);
+  return (await response.json()) as GetJson200<P>;
+}
+
+/**
+ * GET tipado con parámetros de query derivados del contrato. El `path` solo
+ * acepta rutas GET cuya operación declara `query` en el schema, y `query` queda
+ * tipado por esa forma exacta (cero `any`, cero tipos a mano). Internamente
+ * serializa los params a la URL y delega en el núcleo `request`. Lanza
+ * `ApiError` ante fallo de red o status no-2xx.
+ */
+export async function apiGetQuery<P extends GetPathsWithQuery>(
+  path: P,
+  query: GetQuery<P>,
+  options?: ApiRequestOptions
+): Promise<GetJson200<P>> {
+  const queryString = buildQueryString(query as Record<string, unknown>);
+  const response = await request(`${path}${queryString}`, "GET", undefined, options);
   return (await response.json()) as GetJson200<P>;
 }
 
