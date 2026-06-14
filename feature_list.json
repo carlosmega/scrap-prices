@@ -2,100 +2,147 @@
   {
     "id": "F001",
     "titulo": "Bootstrap backend: Django + Django Ninja + Celery (esqueleto)",
-    "capas": [
-      "backend"
-    ],
+    "capas": ["backend"],
     "spec": "specs/F001-bootstrap-backend.md",
     "status": "done"
   },
   {
     "id": "F002",
     "titulo": "Bootstrap frontend: Next.js 15 + Tailwind + shadcn/ui",
-    "capas": [
-      "frontend"
-    ],
+    "capas": ["frontend"],
     "spec": "specs/F002-bootstrap-frontend.md",
     "status": "done"
   },
   {
     "id": "F003",
     "titulo": "Pipeline de contrato: OpenAPI de Ninja -> tipos TypeScript",
-    "capas": [
-      "backend",
-      "frontend"
-    ],
+    "capas": ["backend", "frontend"],
     "spec": "specs/F003-contrato-tipos.md",
     "status": "done"
   },
   {
     "id": "F004",
     "titulo": "Bootstrap E2E: Playwright + smoke test fullstack",
-    "capas": [
-      "e2e"
-    ],
+    "capas": ["e2e"],
     "spec": "specs/F004-bootstrap-e2e.md",
     "status": "done"
   },
   {
     "id": "F006",
-    "titulo": "Modelo M0: base abstracta + geografia y retailers (Retailer, RetailerLocation, Zone, ZoneLocationMap) + Admin",
-    "capas": [
-      "backend"
-    ],
+    "titulo": "Modelo M0: base abstracta + geografia y retailers",
+    "capas": ["backend"],
     "spec": "specs/F006-modelo-geografia-retailers.md",
     "status": "done"
   },
   {
     "id": "F007",
-    "titulo": "Modelo M0: catalogo (Category, CanonicalProduct, RetailerProduct) + curacion manual en Admin",
-    "capas": [
-      "backend"
-    ],
+    "titulo": "Modelo M0: catalogo (Category, CanonicalProduct, RetailerProduct)",
+    "capas": ["backend"],
     "spec": "specs/F007-modelo-catalogo.md",
     "status": "done"
   },
   {
     "id": "F008",
-    "titulo": "Modelo M0: precios y auditoria de scraping (PriceObservation, ScrapeRun) + Admin",
-    "capas": [
-      "backend"
-    ],
+    "titulo": "Modelo M0: precios y auditoria de scraping (PriceObservation, ScrapeRun)",
+    "capas": ["backend"],
     "spec": "specs/F008-modelo-precios-scraping.md",
     "status": "done"
   },
   {
     "id": "F009",
-    "titulo": "Modelo M0: listas de cotizacion anonimas (UserList, UserListItem) + Admin",
-    "capas": [
-      "backend"
-    ],
+    "titulo": "Modelo M0: listas de cotizacion anonimas (UserList, UserListItem)",
+    "capas": ["backend"],
     "spec": "specs/F009-modelo-listas-cotizacion.md",
     "status": "done"
   },
   {
+    "id": "F013",
+    "titulo": "M3: seed de datos demo (Monterrey Metro, retailers, varilla, precios) via management command",
+    "capas": ["backend"],
+    "spec": "specs/F013-seed-datos-demo.md",
+    "status": "in_progress"
+  },
+  {
+    "id": "F014",
+    "titulo": "M3 API: zonas (GET /api/zones, POST /api/zones/resolve)",
+    "capas": ["backend", "frontend"],
+    "spec": "specs/F014-api-zonas.md",
+    "status": "pending"
+  },
+  {
+    "id": "F015",
+    "titulo": "M3 API: busqueda (GET /api/search?q=&zone_id=&sort=price)",
+    "capas": ["backend", "frontend"],
+    "spec": "specs/F015-api-busqueda.md",
+    "status": "pending"
+  },
+  {
+    "id": "F016",
+    "titulo": "M3 API: detalle de producto + historial (GET /api/products/{id})",
+    "capas": ["backend", "frontend"],
+    "spec": "specs/F016-api-detalle-producto.md",
+    "status": "pending"
+  },
+  {
+    "id": "F017",
+    "titulo": "M3 API: listas de cotizacion (CRUD /api/lists + items, anonimo/sesion)",
+    "capas": ["backend", "frontend"],
+    "spec": "specs/F017-api-listas.md",
+    "status": "pending"
+  },
+  {
+    "id": "F018",
+    "titulo": "M3 API: retailers interno (GET /api/retailers)",
+    "capas": ["backend", "frontend"],
+    "spec": "specs/F018-api-retailers.md",
+    "status": "pending"
+  },
+  {
+    "id": "F019",
+    "titulo": "M4 UI: seleccion de zona (persistente en sesion)",
+    "capas": ["frontend", "e2e"],
+    "spec": "specs/F019-ui-seleccion-zona.md",
+    "status": "pending"
+  },
+  {
+    "id": "F020",
+    "titulo": "M4 UI: busqueda + resultados comparados por retailer (frescura, orden por precio)",
+    "capas": ["frontend", "e2e"],
+    "spec": "specs/F020-ui-busqueda-resultados.md",
+    "status": "pending"
+  },
+  {
+    "id": "F021",
+    "titulo": "M4 UI: detalle de producto + historial de precio",
+    "capas": ["frontend", "e2e"],
+    "spec": "specs/F021-ui-detalle-producto.md",
+    "status": "pending"
+  },
+  {
+    "id": "F022",
+    "titulo": "M4 UI: lista de cotizacion con snapshots, subtotal y total",
+    "capas": ["frontend", "e2e"],
+    "spec": "specs/F022-ui-lista-cotizacion.md",
+    "status": "pending"
+  },
+  {
     "id": "F010",
     "titulo": "M1 Reconocimiento Home Depot MX (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
-    "capas": [
-      "docs"
-    ],
+    "capas": ["docs"],
     "spec": "specs/F010-recon-homedepot.md",
     "status": "pending"
   },
   {
     "id": "F011",
     "titulo": "M1 Reconocimiento Construrama (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
-    "capas": [
-      "docs"
-    ],
+    "capas": ["docs"],
     "spec": "specs/F011-recon-construrama.md",
     "status": "pending"
   },
   {
     "id": "F012",
     "titulo": "M1 Script de reconocimiento read-only (Fase 1) - BLOQUEADA: requiere F010+F011 + ToS + red",
-    "capas": [
-      "backend"
-    ],
+    "capas": ["backend"],
     "spec": "specs/F012-script-reconocimiento.md",
     "status": "pending"
   }
