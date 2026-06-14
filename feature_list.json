@@ -109,7 +109,7 @@
     "titulo": "M4 UI: busqueda + resultados comparados por retailer (frescura, orden por precio)",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F020-ui-busqueda-resultados.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F021",
