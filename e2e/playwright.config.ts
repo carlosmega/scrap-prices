@@ -17,7 +17,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 1,
   reporter: [["html", { outputFolder: "playwright-report", open: "never" }]],
   use: {
-    baseURL: "http://localhost:3000",
+    baseURL: "http://localhost:3300",
     trace: "on-first-retry",
   },
   projects: [
@@ -32,17 +32,17 @@ export default defineConfig({
       // y siembra el grafo demo (Monterrey Metro · varilla) para que la UI
       // tenga zonas reales que listar (F019). `seed` es idempotente.
       command:
-        "uv run python manage.py migrate && uv run python manage.py seed && uv run python manage.py runserver 127.0.0.1:8000",
+        "uv run python manage.py migrate && uv run python manage.py seed && uv run python manage.py runserver 127.0.0.1:8800",
       cwd: "../backend",
-      url: "http://127.0.0.1:8000/api/health",
+      url: "http://127.0.0.1:8800/api/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },
     {
       // Frontend Next.js en modo dev.
-      command: "pnpm dev --port 3000",
+      command: "pnpm dev --port 3300",
       cwd: "../frontend",
-      url: "http://localhost:3000",
+      url: "http://localhost:3300",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
     },

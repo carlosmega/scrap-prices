@@ -25,6 +25,14 @@ No leas todo de golpe. Busca lo que necesitas cuando lo necesitas:
 | Verificación completa + E2E               | `./init.sh --e2e`                |
 | Tests del backend                         | `cd backend && uv run pytest`    |
 | Regenerar tipos desde el contrato         | `cd frontend && pnpm gen:api`    |
+| Levantar backend (dev, **:8800**)         | `./dev-backend.sh` (o `cd backend && uv run python manage.py runserver 127.0.0.1:8800`) |
+| Levantar frontend (dev, **:3300**)        | `./dev-frontend.sh` (o `cd frontend && pnpm dev`) |
+
+**Puertos locales fijos (F023):** backend en **`http://localhost:8800`**, frontend
+en **`http://localhost:3300`**. `NEXT_PUBLIC_API_URL` y `CORS_ALLOWED_ORIGINS`
+tienen esos defaults. El frontend (`pnpm dev`) ya está pineado a `:3300`; el backend
+usa el puerto vía el script/comando (Django no tiene default-port nativo). API docs:
+`http://localhost:8800/api/docs`.
 
 **Base de datos / infraestructura:** el MVP corre con **SQLite y sin Docker**
 (decisión del equipo, 2026-06-13: iteración más rápida). **No** levantes

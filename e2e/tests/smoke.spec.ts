@@ -4,7 +4,7 @@ import { expect, test } from "@playwright/test";
  * Smoke fullstack (F004): la home carga y el indicador de salud refleja el
  * backend arriba. Playwright levanta backend + frontend vía `webServer`, así
  * que este test ejerce el lazo completo (fetch client-side a /api/health con
- * CORS desde localhost:3000, configurado en F001).
+ * CORS desde localhost:3300, configurado en F001).
  */
 test("la home carga y el indicador de salud muestra ok", async ({ page }) => {
   await page.goto("/");

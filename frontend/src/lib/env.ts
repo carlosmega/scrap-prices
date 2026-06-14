@@ -6,5 +6,5 @@
  * expone el valor con su default para que la app lo lea de forma tipada.
  */
 export const env = {
-  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000",
+  apiUrl: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8800",
 } as const;

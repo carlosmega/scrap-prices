@@ -20,8 +20,8 @@ env = environ.Env(
     DATABASE_URL=(str, "sqlite:///db.sqlite3"),
     # Celery: solo esqueleto importable en MVP (no hay broker corriendo).
     REDIS_URL=(str, "redis://localhost:6379/0"),
-    # CORS: el frontend de Next vive en :3000 y consume la API en :8000.
-    CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3000"]),
+    # CORS: el frontend de Next vive en :3300 y consume la API en :8800 (F023).
+    CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3300"]),
 )
 
 # Lee un .env de la raíz del backend si existe (no requerido).
