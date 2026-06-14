@@ -2,11 +2,13 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** Núcleo de M3 entregado: **F013 seed ✅ · F014 API zonas ✅ · F015 API búsqueda ✅**.
-La app ya busca "varilla" en una zona y devuelve precios por retailer con frescura, desde la DB.
-`./init.sh` verde. Siguiente `pending`: **F016** (detalle de producto + historial).
+**Feature en curso:** **F016** — API detalle de producto + historial (GET /api/products/{id})
+**Spec:** `specs/F016-api-detalle-producto.md`
 
-Cola M3 restante: F016 (detalle), F017 (listas CRUD), F018 (retailers). Luego M4 UI (F019–F022).
-M1 recon (F010–F012) sigue gated por humano + ToS, al final del backlog.
+## Plan F016 (contract-first, backend + frontend)
+1. backend: `/api/products/{id}?zone_id=` → ProductDetailOut (canónico+specs, prices por retailer
+   reusando F015, history últimas N obs orden -captured_at). 404 producto/zona. Regenera openapi.json.
+2. frontend: `pnpm gen:api` (sin UI; la UI de detalle es F021). Sin drift.
+3. reviewer: `./init.sh` Fase 5 sin drift + criterios.
+
+**Estado:** F016 `in_progress`. M3: F013 ✅ F014 ✅ F015 ✅ → **F016** → F017 → F018.
