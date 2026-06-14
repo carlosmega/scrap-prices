@@ -56,6 +56,33 @@
         ]
       }
     },
+    "/api/retailers": {
+      "get": {
+        "operationId": "apps_geo_api_listar_retailers",
+        "summary": "Listar Retailers",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RetailerOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lista todos los retailers (incluye inactivos) ordenados por nombre.",
+        "tags": [
+          "geo"
+        ]
+      }
+    },
     "/api/zones/resolve": {
       "post": {
         "operationId": "apps_geo_api_resolver_zona",
@@ -645,6 +672,45 @@
           "state"
         ],
         "title": "ZoneOut",
+        "type": "object"
+      },
+      "RetailerOut": {
+        "description": "Representación de soporte/diagnóstico de un retailer (F018).\n\nExpone el modelo de pricing y el estado del scraper para que la UI/operador\nvea de un vistazo qué fuentes están activas/pausadas/no viables.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "pricing_model": {
+            "title": "Pricing Model",
+            "type": "string"
+          },
+          "scraper_status": {
+            "title": "Scraper Status",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "pricing_model",
+          "scraper_status",
+          "is_active"
+        ],
+        "title": "RetailerOut",
         "type": "object"
       },
       "ResolveIn": {

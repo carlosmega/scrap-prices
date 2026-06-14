@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/retailers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Listar Retailers
+         * @description Lista todos los retailers (incluye inactivos) ordenados por nombre.
+         */
+        get: operations["apps_geo_api_listar_retailers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/zones/resolve": {
         parameters: {
             query?: never;
@@ -230,6 +250,27 @@ export interface components {
             slug: string;
             /** State */
             state: string;
+        };
+        /**
+         * RetailerOut
+         * @description Representación de soporte/diagnóstico de un retailer (F018).
+         *
+         *     Expone el modelo de pricing y el estado del scraper para que la UI/operador
+         *     vea de un vistazo qué fuentes están activas/pausadas/no viables.
+         */
+        RetailerOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Slug */
+            slug: string;
+            /** Pricing Model */
+            pricing_model: string;
+            /** Scraper Status */
+            scraper_status: string;
+            /** Is Active */
+            is_active: boolean;
         };
         /**
          * ResolveIn
@@ -528,6 +569,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ZoneOut"][];
+                };
+            };
+        };
+    };
+    apps_geo_api_listar_retailers: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RetailerOut"][];
                 };
             };
         };

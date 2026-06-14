@@ -8,8 +8,8 @@ del dominio o schemas, nunca `request`/`HttpResponse`.
 
 from math import asin, cos, radians, sin, sqrt
 
-from apps.geo.models import Zone
-from apps.geo.schemas import ZoneOut
+from apps.geo.models import Retailer, Zone
+from apps.geo.schemas import RetailerOut, ZoneOut
 
 # Radio medio de la Tierra en km (suficiente para ordenar por cercanía).
 _EARTH_RADIUS_KM = 6371.0
@@ -33,6 +33,29 @@ def listar_zonas_activas() -> list[ZoneOut]:
     """Devuelve las zonas activas ordenadas por nombre como ZoneOut."""
     zonas = Zone.objects.filter(is_active=True).order_by("name")
     return [_to_out(zona) for zona in zonas]
+
+
+def _retailer_to_out(retailer: Retailer) -> RetailerOut:
+    """Mapea un modelo Retailer a su schema de salida RetailerOut (F018)."""
+    return RetailerOut(
+        id=str(retailer.id),
+        name=retailer.name,
+        slug=retailer.slug,
+        pricing_model=retailer.pricing_model,
+        scraper_status=retailer.scraper_status,
+        is_active=retailer.is_active,
+    )
+
+
+def listar_retailers() -> list[RetailerOut]:
+    """Devuelve TODOS los retailers (incluye inactivos) ordenados por nombre.
+
+    Endpoint de soporte/diagnóstico (F018): a diferencia de las zonas, aquí no
+    se filtra por `is_active` para que el operador vea también las fuentes
+    pausadas/no viables.
+    """
+    retailers = Retailer.objects.order_by("name")
+    return [_retailer_to_out(retailer) for retailer in retailers]
 
 
 def resolver_zona(lat: float, lng: float) -> ZoneOut | None:

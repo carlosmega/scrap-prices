@@ -8,7 +8,7 @@ from ninja import Router
 from ninja.errors import HttpError
 
 from apps.geo import services
-from apps.geo.schemas import ResolveIn, ZoneOut
+from apps.geo.schemas import ResolveIn, RetailerOut, ZoneOut
 
 router = Router(tags=["geo"])
 
@@ -17,6 +17,12 @@ router = Router(tags=["geo"])
 def listar_zonas(request):
     """Lista las zonas activas ordenadas por nombre."""
     return services.listar_zonas_activas()
+
+
+@router.get("/retailers", response=list[RetailerOut])
+def listar_retailers(request):
+    """Lista todos los retailers (incluye inactivos) ordenados por nombre."""
+    return services.listar_retailers()
 
 
 @router.post("/zones/resolve", response=ZoneOut)

@@ -95,7 +95,7 @@
     "titulo": "M3 API: retailers interno (GET /api/retailers)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F018-api-retailers.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F019",
