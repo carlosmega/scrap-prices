@@ -95,13 +95,15 @@ fi
 [ -x .claude/hooks/guard-feature.sh ] && ok "hook guard-feature.sh ejecutable" || bad "hook guard-feature.sh no ejecutable (chmod +x)"
 
 # Gate done <- review: toda feature 'done' exige su review APROBADO (mecánico).
+# El veredicto debe aparecer cerca del inicio del informe (primeras líneas), tolerando
+# un título de markdown antes (p.ej. "# Review F010" en la línea 1, veredicto en la 3).
 miss=0; ndone=0
 for id in $DONE_IDS; do
   ndone=$((ndone+1))
-  if [ -f "progress/review_${id}.md" ] && head -n1 "progress/review_${id}.md" | grep -qi "Veredicto: APROBADO"; then
+  if [ -f "progress/review_${id}.md" ] && head -n 6 "progress/review_${id}.md" | grep -qiE "Veredicto:[[:space:]]*APROBADO"; then
     :
   else
-    bad "feature $id está 'done' sin progress/review_${id}.md con 'Veredicto: APROBADO'"
+    bad "feature $id está 'done' sin 'Veredicto: APROBADO' en las primeras líneas de progress/review_${id}.md"
     miss=$((miss+1))
   fi
 done
