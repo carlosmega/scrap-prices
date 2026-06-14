@@ -60,14 +60,14 @@
     "titulo": "M3: seed de datos demo (Monterrey Metro, retailers, varilla, precios) via management command",
     "capas": ["backend"],
     "spec": "specs/F013-seed-datos-demo.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F014",
     "titulo": "M3 API: zonas (GET /api/zones, POST /api/zones/resolve)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F014-api-zonas.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F015",

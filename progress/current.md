@@ -2,17 +2,15 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F013** — Seed de datos demo (Monterrey Metro · varilla)
-**Spec:** `specs/F013-seed-datos-demo.md`
+**Feature en curso:** **F014** — API de zonas (GET /api/zones, POST /api/zones/resolve)
+**Spec:** `specs/F014-api-zonas.md`
 
-## Camino elegido por el humano: M3/M4 con seed data (autónomo)
-M1/M2 (scraping) diferidos al recon humano + ToS. Construyo la app contra los modelos M0
-con datos sembrados. Roadmap en `feature_list.json`: M3 API (F013–F018) → M4 UI (F019–F022),
-luego M1 recon (F010–F012, gated) al final.
+## Plan F014 (contract-first, capas backend + frontend)
+1. **backend** → `implementer-backend`: `apps/geo/api.py` (router sin ORM) + `schemas.py`
+   (ZoneOut, ResolveIn) + lógica de resolución en `services.py`; montar router en
+   `config/api.py`; **regenerar `backend/openapi.json`**. Tests de ambos endpoints + 404.
+2. **frontend** → `implementer-frontend`: `pnpm gen:api` para sincronizar `schema.d.ts`
+   (sin UI; la UI de zona es F019). Verificar sin drift.
+3. **reviewer** → `./init.sh` (Fase 5 sin drift) + criterios.
 
-## Plan F013 (capa única backend → implementer-backend)
-Management command `seed` idempotente que crea el grafo PRD para Monterrey Metro/varilla
-(retailers, locations, zona, map, categoría, canónicos, retailer products matcheados, price
-observations con historial). Sin endpoints. SQLite.
-
-**Estado:** F013 `in_progress`. Lanzando `implementer-backend`.
+**Estado:** F014 `in_progress`. Orquestando capa backend. (M3: F013 ✅ → **F014** → F015…)
