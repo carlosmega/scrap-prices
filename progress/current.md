@@ -2,10 +2,17 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** MVP navegable completo (M0+M3+M4) + **puertos fijos F023**: backend `:8800`,
-frontend `:3300`. `./init.sh --e2e` VERDE (5 specs en los puertos nuevos). Arranque local:
-`./dev-backend.sh` (:8800) + `./dev-frontend.sh` (:3300) → http://localhost:3300.
+**Feature en curso:** **F010** — Reconocimiento Home Depot MX (Fase 0)
+**Spec:** `specs/F010-recon-homedepot.md`
 
-Pendiente: solo **M1/M2 (scraping)** gated por recon humano + ToS (F010–F012).
+## Plan F010 (capa docs)
+El humano ya capturó el HAR: `docs/recon/har/www.homedepot.com.mx.har` (8 MB, 188 JSON responses).
+- Un subagente analiza el HAR **offline** (scripts, sin leer el HAR crudo en contexto ni pegar a la red)
+  y transcribe a `docs/recon/homedepot.md` (desde `docs/recon/TEMPLATE.md`): endpoint XHR de precio +
+  forma del payload, mecanismo tienda/cookie, paginación, tienda(s) de Monterrey.
+- **Sin cookies/tokens/PII en el doc** (el HAR es gitignored; el .md sí se commitea).
+- Sección 0 (ToS): el subagente documenta lo observable (robots, mecanismo); el **veredicto ToS lo
+  confirma el humano** (gate §2.3/§14).
+- Reviewer verifica completitud (sin TBD en 1–4). Cierre.
+
+**Estado:** F010 `in_progress`. Lanzando análisis del HAR.

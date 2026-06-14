@@ -137,7 +137,7 @@
     "titulo": "M1 Reconocimiento Home Depot MX (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
     "capas": ["docs"],
     "spec": "specs/F010-recon-homedepot.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F011",
