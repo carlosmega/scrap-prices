@@ -50,3 +50,41 @@ class SearchResultOut(Schema):
 
     canonical_product: CanonicalProductRefOut
     prices: list[PriceByRetailerOut]
+
+
+class CanonicalProductDetailOut(Schema):
+    """Producto canónico expandido para el detalle (incluye `specs` libres)."""
+
+    id: str
+    name: str
+    category: str
+    unit: str
+    specs: dict
+
+
+class PriceHistoryPointOut(Schema):
+    """Una lectura histórica de precio (una `PriceObservation`) con su retailer.
+
+    `price` se serializa como string del Decimal por exactitud monetaria
+    (PRD §8). El historial combina todos los retailers en la zona, ordenado por
+    `-captured_at` (la UI de F021 puede agrupar por retailer).
+    """
+
+    retailer: RetailerRefOut
+    price: Decimal
+    currency: str = "MXN"
+    is_available: bool
+    captured_at: datetime
+
+
+class ProductDetailOut(Schema):
+    """Detalle de un canónico: producto, precios actuales por retailer e historial.
+
+    `prices` reutiliza el ensamblado "precio más fresco por retailer/zona" de
+    F015; `history` son las últimas N observaciones en la zona (orden
+    `-captured_at`).
+    """
+
+    canonical_product: CanonicalProductDetailOut
+    prices: list[PriceByRetailerOut]
+    history: list[PriceHistoryPointOut]

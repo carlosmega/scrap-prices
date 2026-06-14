@@ -8,7 +8,7 @@ from ninja import Query, Router
 from ninja.errors import HttpError
 
 from apps.catalog import services
-from apps.catalog.schemas import SearchResultOut
+from apps.catalog.schemas import ProductDetailOut, SearchResultOut
 
 router = Router(tags=["catalog"])
 
@@ -28,3 +28,16 @@ def buscar(
     if resultados is None:
         raise HttpError(404, "zona no encontrada")
     return resultados
+
+
+@router.get("/products/{id}", response=ProductDetailOut)
+def detalle_producto(request, id: str, zone_id: str = Query(...)):
+    """Detalle de un canónico en la zona: producto, precios actuales e historial.
+
+    404 si el producto no existe/inactivo o si `zone_id` no existe/inactiva
+    (el service devuelve None).
+    """
+    detalle = services.detalle_producto(product_id=id, zone_id=zone_id)
+    if detalle is None:
+        raise HttpError(404, "producto o zona no encontrados")
+    return detalle

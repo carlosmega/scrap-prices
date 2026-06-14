@@ -2,13 +2,16 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F016** — API detalle de producto + historial (GET /api/products/{id})
-**Spec:** `specs/F016-api-detalle-producto.md`
+**Feature en curso:** **F017** — API listas de cotización (CRUD listas + items, anónimo/sesión)
+**Spec:** `specs/F017-api-listas.md`
 
-## Plan F016 (contract-first, backend + frontend)
-1. backend: `/api/products/{id}?zone_id=` → ProductDetailOut (canónico+specs, prices por retailer
-   reusando F015, history últimas N obs orden -captured_at). 404 producto/zona. Regenera openapi.json.
-2. frontend: `pnpm gen:api` (sin UI; la UI de detalle es F021). Sin drift.
-3. reviewer: `./init.sh` Fase 5 sin drift + criterios.
+## Plan F017 (contract-first, backend + frontend; slice grande, 8 endpoints)
+1. backend: CRUD /api/lists + /api/lists/{id} + /api/lists/{id}/items. Identidad anónima
+   por header `X-Session-Key` (→ UserList.session_key, F009). Snapshot inmutable de precio al
+   agregar item (última obs en la zona de la lista). subtotal/total (reusa services F009).
+   404 cross-session, 422 validación, 400 sin header. Router sin ORM. Regenera openapi.json.
+2. frontend: `pnpm gen:api` + **extiende client.ts** con apiPost/apiPatch/apiDelete tipados
+   (fetch solo en client.ts). Sin UI (la UI de lista es F022). Sin drift.
+3. reviewer: `./init.sh` Fase 5 sin drift + criterios (snapshot inmutable, scoping sesión).
 
-**Estado:** F016 `in_progress`. M3: F013 ✅ F014 ✅ F015 ✅ → **F016** → F017 → F018.
+**Estado:** F017 `in_progress`. M3: F013–F016 ✅ → **F017** → F018.

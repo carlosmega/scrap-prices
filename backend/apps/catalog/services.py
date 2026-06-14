@@ -12,13 +12,20 @@ import unicodedata
 
 from apps.catalog.models import CanonicalProduct
 from apps.catalog.schemas import (
+    CanonicalProductDetailOut,
     CanonicalProductRefOut,
     PriceByRetailerOut,
+    PriceHistoryPointOut,
+    ProductDetailOut,
     RetailerRefOut,
     SearchResultOut,
 )
 from apps.geo.models import Zone
+from apps.prices.models import PriceObservation
 from apps.prices.services import ultima_observacion
+
+# Tamaño por defecto del historial de precios en el detalle (PRD/F016: N=20).
+_HISTORIAL_DEFAULT = 20
 
 # Ordena los retailers-sin-precio al final cuando se ordena por precio.
 _PRECIO_INFINITO = None  # marcador semántico; se traduce a +inf en la key
@@ -111,3 +118,78 @@ def buscar(
         )
 
     return [item for item, _, _ in resultados]
+
+
+def _historial(canonico: CanonicalProduct, zona: Zone, n: int) -> list[PriceHistoryPointOut]:
+    """Últimas `n` observaciones del canónico en la zona, orden `-captured_at`.
+
+    Combina todos los `RetailerProduct` activos enlazados al canónico; cada punto
+    lleva su retailer. La consulta se apoya en el índice (retailer_product, zone,
+    -captured_at) y el orden por `-captured_at` del modelo.
+    """
+    observaciones = (
+        PriceObservation.objects.filter(
+            retailer_product__canonical_product=canonico,
+            retailer_product__is_active=True,
+            zone=zona,
+        )
+        .select_related("retailer_product__retailer")
+        .order_by("-captured_at")[:n]
+    )
+    return [
+        PriceHistoryPointOut(
+            retailer=RetailerRefOut(
+                slug=obs.retailer_product.retailer.slug,
+                name=obs.retailer_product.retailer.name,
+            ),
+            price=obs.price,
+            currency=obs.currency,
+            is_available=obs.is_available,
+            captured_at=obs.captured_at,
+        )
+        for obs in observaciones
+    ]
+
+
+def detalle_producto(
+    product_id: str,
+    zone_id: str,
+    historial_n: int = _HISTORIAL_DEFAULT,
+) -> ProductDetailOut | None:
+    """Detalle de un canónico en una zona: producto, precios actuales e historial.
+
+    Devuelve None si el canónico no existe/inactivo o si la zona no existe/inactiva
+    (el router lo traduce a 404). `prices` reutiliza el ensamblado "precio más
+    fresco por retailer/zona" de F015; `history` son las últimas `historial_n`
+    observaciones en la zona, orden `-captured_at`.
+    """
+    zona = Zone.objects.filter(id=zone_id, is_active=True).first()
+    if zona is None:
+        return None
+
+    canonico = (
+        CanonicalProduct.objects.filter(id=product_id, is_active=True)
+        .select_related("category")
+        .first()
+    )
+    if canonico is None:
+        return None
+
+    retailer_products = (
+        canonico.retailer_products.filter(is_active=True)
+        .select_related("retailer")
+        .order_by("retailer__name")
+    )
+    prices = [_ensamblar_precio(rp, zona) for rp in retailer_products]
+
+    return ProductDetailOut(
+        canonical_product=CanonicalProductDetailOut(
+            id=str(canonico.id),
+            name=canonico.name,
+            category=canonico.category.name,
+            unit=canonico.unit,
+            specs=canonico.specs,
+        ),
+        prices=prices,
+        history=_historial(canonico, zona, historial_n),
+    )

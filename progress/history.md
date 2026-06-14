@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-13 · **F016** M3 API detalle de producto + historial (GET /api/products/{id}: canónico+specs, prices por retailer reusando F015, history últimas 20 obs orden -captured_at; 404 producto/zona) · APROBADO 1er ciclo · `./init.sh` verde, Fase 5 sin drift. Informes `impl_F016_{backend,frontend}.md`, review `review_F016.md`.
 - 2026-06-13 · **F015** M3 API búsqueda (GET /api/search: canónicos + precio más fresco por retailer en zona, reusa ultima_observacion; q acento-insensible; sort precio/nombre; retailer sin obs→null; 404 zona) · APROBADO 1er ciclo · `./init.sh` verde, **Fase 5 sin drift**. 9 tests búsqueda. Informes `impl_F015_{backend,frontend}.md`, review `review_F015.md`.
 - 2026-06-13 · **F014** M3 API zonas (GET /api/zones, POST /api/zones/resolve con haversine en services; 404 sin cobertura) · APROBADO 1er ciclo · `./init.sh` verde, **Fase 5 sin drift**. 10 tests geo; helper `fetchZones()` tipado. Informes `impl_F014_{backend,frontend}.md`, review `review_F014.md`.
 - 2026-06-13 · **F013** M3 seed de datos demo (command `seed` idempotente en apps/core; grafo Monterrey Metro/varilla: 2 retailers, 3 canónicos, 6 retailer products matcheados, 18 price observations con historial; `raw_payload={seed:true}`) · APROBADO 1er ciclo · `./init.sh` verde (40 tests). Informe `impl_F013_backend.md`, review `review_F013.md`.

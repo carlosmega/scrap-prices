@@ -144,6 +144,48 @@
           "catalog"
         ]
       }
+    },
+    "/api/products/{id}": {
+      "get": {
+        "operationId": "apps_catalog_api_detalle_producto",
+        "summary": "Detalle Producto",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "schema": {
+              "title": "Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "zone_id",
+            "schema": {
+              "title": "Zone Id",
+              "type": "string"
+            },
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProductDetailOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Detalle de un canónico en la zona: producto, precios actuales e historial.\n\n404 si el producto no existe/inactivo o si `zone_id` no existe/inactiva\n(el service devuelve None).",
+        "tags": [
+          "catalog"
+        ]
+      }
     }
   },
   "components": {
@@ -334,6 +376,105 @@
           "prices"
         ],
         "title": "SearchResultOut",
+        "type": "object"
+      },
+      "CanonicalProductDetailOut": {
+        "description": "Producto canónico expandido para el detalle (incluye `specs` libres).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          },
+          "specs": {
+            "additionalProperties": true,
+            "title": "Specs",
+            "type": "object"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "unit",
+          "specs"
+        ],
+        "title": "CanonicalProductDetailOut",
+        "type": "object"
+      },
+      "PriceHistoryPointOut": {
+        "description": "Una lectura histórica de precio (una `PriceObservation`) con su retailer.\n\n`price` se serializa como string del Decimal por exactitud monetaria\n(PRD §8). El historial combina todos los retailers en la zona, ordenado por\n`-captured_at` (la UI de F021 puede agrupar por retailer).",
+        "properties": {
+          "retailer": {
+            "$ref": "#/components/schemas/RetailerRefOut"
+          },
+          "price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price",
+            "type": "string"
+          },
+          "currency": {
+            "default": "MXN",
+            "title": "Currency",
+            "type": "string"
+          },
+          "is_available": {
+            "title": "Is Available",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retailer",
+          "price",
+          "is_available",
+          "captured_at"
+        ],
+        "title": "PriceHistoryPointOut",
+        "type": "object"
+      },
+      "ProductDetailOut": {
+        "description": "Detalle de un canónico: producto, precios actuales por retailer e historial.\n\n`prices` reutiliza el ensamblado \"precio más fresco por retailer/zona\" de\nF015; `history` son las últimas N observaciones en la zona (orden\n`-captured_at`).",
+        "properties": {
+          "canonical_product": {
+            "$ref": "#/components/schemas/CanonicalProductDetailOut"
+          },
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/PriceByRetailerOut"
+            },
+            "title": "Prices",
+            "type": "array"
+          },
+          "history": {
+            "items": {
+              "$ref": "#/components/schemas/PriceHistoryPointOut"
+            },
+            "title": "History",
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonical_product",
+          "prices",
+          "history"
+        ],
+        "title": "ProductDetailOut",
         "type": "object"
       }
     }

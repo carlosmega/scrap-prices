@@ -86,6 +86,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/products/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Detalle Producto
+         * @description Detalle de un canónico en la zona: producto, precios actuales e historial.
+         *
+         *     404 si el producto no existe/inactivo o si `zone_id` no existe/inactiva
+         *     (el service devuelve None).
+         */
+        get: operations["apps_catalog_api_detalle_producto"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -184,6 +207,64 @@ export interface components {
             /** Prices */
             prices: components["schemas"]["PriceByRetailerOut"][];
         };
+        /**
+         * CanonicalProductDetailOut
+         * @description Producto canónico expandido para el detalle (incluye `specs` libres).
+         */
+        CanonicalProductDetailOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Unit */
+            unit: string;
+            /** Specs */
+            specs: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * PriceHistoryPointOut
+         * @description Una lectura histórica de precio (una `PriceObservation`) con su retailer.
+         *
+         *     `price` se serializa como string del Decimal por exactitud monetaria
+         *     (PRD §8). El historial combina todos los retailers en la zona, ordenado por
+         *     `-captured_at` (la UI de F021 puede agrupar por retailer).
+         */
+        PriceHistoryPointOut: {
+            retailer: components["schemas"]["RetailerRefOut"];
+            /** Price */
+            price: string;
+            /**
+             * Currency
+             * @default MXN
+             */
+            currency: string;
+            /** Is Available */
+            is_available: boolean;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+        };
+        /**
+         * ProductDetailOut
+         * @description Detalle de un canónico: producto, precios actuales por retailer e historial.
+         *
+         *     `prices` reutiliza el ensamblado "precio más fresco por retailer/zona" de
+         *     F015; `history` son las últimas N observaciones en la zona (orden
+         *     `-captured_at`).
+         */
+        ProductDetailOut: {
+            canonical_product: components["schemas"]["CanonicalProductDetailOut"];
+            /** Prices */
+            prices: components["schemas"]["PriceByRetailerOut"][];
+            /** History */
+            history: components["schemas"]["PriceHistoryPointOut"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -277,6 +358,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SearchResultOut"][];
+                };
+            };
+        };
+    };
+    apps_catalog_api_detalle_producto: {
+        parameters: {
+            query: {
+                zone_id: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProductDetailOut"];
                 };
             };
         };

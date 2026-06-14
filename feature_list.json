@@ -81,14 +81,14 @@
     "titulo": "M3 API: detalle de producto + historial (GET /api/products/{id})",
     "capas": ["backend", "frontend"],
     "spec": "specs/F016-api-detalle-producto.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F017",
     "titulo": "M3 API: listas de cotizacion (CRUD /api/lists + items, anonimo/sesion)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F017-api-listas.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F018",
