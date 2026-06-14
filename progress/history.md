@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-13 · **F014** M3 API zonas (GET /api/zones, POST /api/zones/resolve con haversine en services; 404 sin cobertura) · APROBADO 1er ciclo · `./init.sh` verde, **Fase 5 sin drift**. 10 tests geo; helper `fetchZones()` tipado. Informes `impl_F014_{backend,frontend}.md`, review `review_F014.md`.
 - 2026-06-13 · **F013** M3 seed de datos demo (command `seed` idempotente en apps/core; grafo Monterrey Metro/varilla: 2 retailers, 3 canónicos, 6 retailer products matcheados, 18 price observations con historial; `raw_payload={seed:true}`) · APROBADO 1er ciclo · `./init.sh` verde (40 tests). Informe `impl_F013_backend.md`, review `review_F013.md`.
 - 2026-06-13 · **F009** Modelo M0 listas de cotización (UserList anónima por session_key —sin user_fk, MVP—; UserListItem con snapshot inmutable de precio + cantidad; subtotal en services.py) · APROBADO 1er ciclo · `./init.sh` verde. 11 tests (37 total). **🎉 Modelo M0 completo (F006–F009).** Informe `impl_F009_backend.md`, review `review_F009.md`.
 - 2026-06-13 · **F008** Modelo M0 precios/scraping (PriceObservation Decimal + índice compuesto (retailer_product,zone,-captured_at); ScrapeRun auditoría; helper `ultima_observacion` en services.py) · APROBADO 1er ciclo · `./init.sh` verde. 9 tests. Migración commiteada. Informe `impl_F008_backend.md`, review `review_F008.md`.

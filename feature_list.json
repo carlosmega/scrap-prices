@@ -67,14 +67,14 @@
     "titulo": "M3 API: zonas (GET /api/zones, POST /api/zones/resolve)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F014-api-zonas.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F015",
     "titulo": "M3 API: busqueda (GET /api/search?q=&zone_id=&sort=price)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F015-api-busqueda.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F016",

@@ -28,6 +28,66 @@
           "core"
         ]
       }
+    },
+    "/api/zones": {
+      "get": {
+        "operationId": "apps_geo_api_listar_zonas",
+        "summary": "Listar Zonas",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ZoneOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Lista las zonas activas ordenadas por nombre.",
+        "tags": [
+          "geo"
+        ]
+      }
+    },
+    "/api/zones/resolve": {
+      "post": {
+        "operationId": "apps_geo_api_resolver_zona",
+        "summary": "Resolver Zona",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ZoneOut"
+                }
+              }
+            }
+          }
+        },
+        "description": "Resuelve la zona activa más cercana al centroide. 404 si sin cobertura.",
+        "tags": [
+          "geo"
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResolveIn"
+              }
+            }
+          },
+          "required": true
+        }
+      }
     }
   },
   "components": {
@@ -44,6 +104,54 @@
           "status"
         ],
         "title": "HealthOut",
+        "type": "object"
+      },
+      "ZoneOut": {
+        "description": "Representación pública de una zona (subconjunto del modelo Zone).",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "slug",
+          "state"
+        ],
+        "title": "ZoneOut",
+        "type": "object"
+      },
+      "ResolveIn": {
+        "description": "Coordenadas del usuario para resolver su zona más cercana.",
+        "properties": {
+          "lat": {
+            "title": "Lat",
+            "type": "number"
+          },
+          "lng": {
+            "title": "Lng",
+            "type": "number"
+          }
+        },
+        "required": [
+          "lat",
+          "lng"
+        ],
+        "title": "ResolveIn",
         "type": "object"
       }
     }
