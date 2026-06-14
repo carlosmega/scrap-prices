@@ -2,14 +2,17 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** 🎉 **MVP navegable de ConstruScan completo** — bootstrap (F001–F004) + modelo M0
-(F006–F009) + API M3 (F013–F018) + UI M4 (F019–F022). `./init.sh --e2e` VERDE, 5 specs E2E.
-Flujo usuario end-to-end: elegir zona → buscar varilla → comparar precios por retailer (frescura) →
-ver detalle+historial → agregar a cotización (snapshot) → editar/quitar → subtotal/total.
+**Feature en curso:** **F023** — Puertos fijos locales (backend 8800, frontend 3300)
+**Spec:** `specs/F023-puertos-fijos.md`
 
-**Sin features `pending` ejecutables por agentes.** Solo queda **M1/M2 (scraping)** gated por
-recon humano (DevTools/HAR) + revisión ToS — F010–F012 al final del backlog. Hoy la app corre con
-datos `seed`; el scraping real los reemplaza cuando se haga el recon. Ver `progress/auditoria-arnes-2026-06-13.md`
-y `progress/history.md` para la traza completa.
+## Plan F023 (3 capas: backend + frontend + e2e)
+Objetivo: dev local SIEMPRE en backend `:8800` / frontend `:3300`.
+1. **backend** → CORS_ALLOWED_ORIGINS default → http://localhost:3300 (settings.py). No toca contrato.
+2. **frontend** → NEXT_PUBLIC_API_URL default → http://localhost:8800 (env.ts + .env files);
+   `dev`/`start` con `--port 3300`. + **e2e** playwright.config: backend 8800, frontend 3300, baseURL.
+3. **líder** → .env.example, AGENTS.md, README, scripts dev-backend.sh/dev-frontend.sh.
+4. **reviewer** → `./init.sh --e2e` verde en puertos nuevos + preflight CORS desde :3300.
+
+Orden: backend (CORS) primero, luego frontend+e2e (el E2E en :3300 necesita CORS que permita :3300).
+
+**Estado:** F023 `in_progress`. Lanzando capa backend.

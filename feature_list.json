@@ -126,6 +126,13 @@
     "status": "done"
   },
   {
+    "id": "F023",
+    "titulo": "Puertos fijos locales: backend 8800, frontend 3300 (CORS + env + e2e)",
+    "capas": ["backend", "frontend", "e2e"],
+    "spec": "specs/F023-puertos-fijos.md",
+    "status": "in_progress"
+  },
+  {
     "id": "F010",
     "titulo": "M1 Reconocimiento Home Depot MX (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
     "capas": ["docs"],
