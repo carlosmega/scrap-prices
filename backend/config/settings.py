@@ -8,6 +8,7 @@ posterior, no requerida ahora.
 from pathlib import Path
 
 import environ
+from corsheaders.defaults import default_headers
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -113,6 +114,9 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 # --- CORS -------------------------------------------------------------------
 CORS_ALLOWED_ORIGINS = env("CORS_ALLOWED_ORIGINS")
+# El frontend identifica la sesión anónima con un header custom (F022); sin
+# permitirlo en CORS, el navegador bloquea el preflight de /api/lists*.
+CORS_ALLOW_HEADERS = (*default_headers, "x-session-key")
 
 # --- Celery -----------------------------------------------------------------
 # Solo esqueleto en MVP: no hay broker corriendo, no se ejercita ningún worker.

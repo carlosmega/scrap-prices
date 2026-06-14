@@ -1,20 +1,26 @@
+import { QuoteBadge } from "@/features/lists/components/quote-badge";
 import { HealthIndicator } from "@/features/health/components/health-indicator";
 import { SearchPanel } from "@/features/search/components/search-panel";
 import { ZoneSelector } from "@/features/zones/components/zone-selector";
 
 /**
- * Home de ConstruScan (shell de la app, F019 + F020).
+ * Home de ConstruScan (shell de la app, F019 + F020 + F022).
  *
- * Server Component: compone el encabezado, el selector de zona y, debajo, el
- * panel de búsqueda. La interactividad y el consumo de API viven en Client
- * Components hijos (`<ZoneSelector />`, `<SearchPanel />`, `<HealthIndicator />`),
+ * Server Component: compone la barra superior (con el badge de la cotización), el
+ * encabezado, el selector de zona y, debajo, el panel de búsqueda. La
+ * interactividad y el consumo de API viven en Client Components hijos
+ * (`<ZoneSelector />`, `<SearchPanel />`, `<QuoteBadge />`, `<HealthIndicator />`),
  * por lo que el fetch ocurre en el navegador y `pnpm build` no depende de que el
  * backend esté arriba.
  */
 export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center gap-8 bg-background p-8">
-      <header className="flex flex-col items-center gap-2 pt-8 text-center">
+      <div className="flex w-full max-w-2xl items-center justify-end">
+        <QuoteBadge />
+      </div>
+
+      <header className="flex flex-col items-center gap-2 text-center">
         <h1 className="text-3xl font-semibold tracking-tight text-foreground">
           ConstruScan
         </h1>

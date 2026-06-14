@@ -38,10 +38,18 @@ test("desde la búsqueda al detalle: precios por retailer e historial", async ({
   // Hay al menos un resultado; entrar al detalle del primero por su enlace.
   const results = page.getByTestId("search-result");
   await expect(results.first()).toBeVisible({ timeout: 15_000 });
-  await page.getByTestId("search-result-link").first().click();
+
+  // Click + navegación atómicos: `waitForURL` se arma ANTES del click para no
+  // perder la transición a `/products/{id}` bajo `fullyParallel` (evita el flaky
+  // donde `toHaveURL` veía aún `/`).
+  const resultLink = page.getByTestId("search-result-link").first();
+  await Promise.all([
+    page.waitForURL(/\/products\/[^/]+$/, { timeout: 15_000 }),
+    resultLink.click(),
+  ]);
 
   // Estamos en la ruta del detalle.
-  await expect(page).toHaveURL(/\/products\/[^/]+$/);
+  await expect(page).toHaveURL(/\/products\/[^/]+$/, { timeout: 15_000 });
 
   // El detalle carga con sus datos.
   const detail = page.getByTestId("product-detail");

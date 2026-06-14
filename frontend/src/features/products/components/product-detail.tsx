@@ -162,7 +162,7 @@ export function ProductDetail({ id }: { id: string }) {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <ProductPrices prices={state.detail.prices} />
+              <ProductPrices prices={state.detail.prices} zoneId={zoneId} />
             </CardContent>
           </Card>
 

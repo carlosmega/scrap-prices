@@ -16,11 +16,20 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+import { AddToQuoteButton } from "@/features/lists/components/add-to-quote-button";
+
 import { formatPrice, sortPricesAsc } from "../format";
 import { freshnessLabel } from "../relative-time";
 import type { SearchResult } from "../types";
 
-export function ResultCard({ result }: { result: SearchResult }) {
+export function ResultCard({
+  result,
+  zoneId,
+}: {
+  result: SearchResult;
+  /** Zona activa; se propaga al botón "Agregar a mi cotización". */
+  zoneId: string | null;
+}) {
   const { canonical_product: product, prices } = result;
   const orderedPrices = sortPricesAsc(prices);
 
@@ -68,12 +77,19 @@ export function ResultCard({ result }: { result: SearchResult }) {
                 </div>
 
                 {hasPrice ? (
-                  <span
-                    className="text-base font-semibold tabular-nums text-foreground"
-                    data-testid="retailer-price"
-                  >
-                    {formatPrice(entry.price as string, entry.currency)}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className="text-base font-semibold tabular-nums text-foreground"
+                      data-testid="retailer-price"
+                    >
+                      {formatPrice(entry.price as string, entry.currency)}
+                    </span>
+                    <AddToQuoteButton
+                      retailerProductId={entry.retailer_product_id}
+                      zoneId={zoneId}
+                      label="Agregar"
+                    />
+                  </div>
                 ) : (
                   <span
                     className="text-sm text-muted-foreground"

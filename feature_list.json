@@ -120,10 +120,10 @@
   },
   {
     "id": "F022",
-    "titulo": "M4 UI: lista de cotizacion con snapshots, subtotal y total",
-    "capas": ["frontend", "e2e"],
+    "titulo": "M4 UI: lista de cotizacion con snapshots, subtotal y total (+ CORS X-Session-Key backend)",
+    "capas": ["backend", "frontend", "e2e"],
     "spec": "specs/F022-ui-lista-cotizacion.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F010",

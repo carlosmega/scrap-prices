@@ -120,6 +120,32 @@ type PostBody<P extends PostPaths> = RequestJson<paths[P]["post"]>;
 type PatchBody<P extends PatchPaths> = RequestJson<paths[P]["patch"]>;
 
 /**
+ * Parámetros de ruta de un método dado (p.ej. `{ list_id }` en
+ * `/api/lists/{list_id}/items`), derivados del contrato. Resuelve a `never`
+ * cuando la operación no declara `path`.
+ */
+type PathParamsOf<O> = O extends { parameters: { path: infer T } } ? T : never;
+
+/** Solo las rutas POST cuya operación declara parámetros de ruta (`{id}`). */
+type PostPathsWithParams = {
+  [P in PostPaths]: [PathParamsOf<paths[P]["post"]>] extends [never] ? never : P;
+}[PostPaths];
+
+/** Solo las rutas PATCH cuya operación declara parámetros de ruta (`{id}`). */
+type PatchPathsWithParams = {
+  [P in PatchPaths]: [PathParamsOf<paths[P]["patch"]>] extends [never]
+    ? never
+    : P;
+}[PatchPaths];
+
+/** Solo las rutas DELETE cuya operación declara parámetros de ruta (`{id}`). */
+type DeletePathsWithParams = {
+  [P in DeletePaths]: [PathParamsOf<paths[P]["delete"]>] extends [never]
+    ? never
+    : P;
+}[DeletePaths];
+
+/**
  * Error de API normalizado. Se lanza cuando el backend responde con un código
  * fuera del rango 2xx o cuando la petición de red falla (backend caído, CORS).
  */
@@ -329,4 +355,54 @@ export async function apiDelete<P extends DeletePaths>(
   options?: ApiRequestOptions
 ): Promise<void> {
   await request(path, "DELETE", undefined, options);
+}
+
+/**
+ * POST tipado para rutas con parámetros de ruta (`{list_id}`, etc.). El `path`
+ * solo acepta rutas POST cuya operación declara `path` en el contrato; `params`
+ * queda tipado por esa forma exacta y `body` por su `requestBody`. Sustituye los
+ * marcadores en la plantilla y delega en `request`. Cero `any`, cero tipos a
+ * mano. Lanza `ApiError` ante fallo de red o status no-2xx.
+ */
+export async function apiPostPath<P extends PostPathsWithParams>(
+  path: P,
+  params: PathParamsOf<paths[P]["post"]>,
+  body: PostBody<P>,
+  options?: ApiRequestOptions
+): Promise<PostJson<P>> {
+  const resolvedPath = buildPath(path, params as Record<string, unknown>);
+  const response = await request(resolvedPath, "POST", body, options);
+  return (await response.json()) as PostJson<P>;
+}
+
+/**
+ * PATCH tipado para rutas con parámetros de ruta (`{list_id}`/`{item_id}`). El
+ * `path` solo acepta rutas PATCH cuya operación declara `path` en el contrato;
+ * `params` y `body` quedan tipados por el contrato. Sustituye los marcadores y
+ * delega en `request`. Lanza `ApiError` ante fallo de red o status no-2xx.
+ */
+export async function apiPatchPath<P extends PatchPathsWithParams>(
+  path: P,
+  params: PathParamsOf<paths[P]["patch"]>,
+  body: PatchBody<P>,
+  options?: ApiRequestOptions
+): Promise<PatchJson<P>> {
+  const resolvedPath = buildPath(path, params as Record<string, unknown>);
+  const response = await request(resolvedPath, "PATCH", body, options);
+  return (await response.json()) as PatchJson<P>;
+}
+
+/**
+ * DELETE tipado para rutas con parámetros de ruta (`{list_id}`/`{item_id}`). Las
+ * rutas DELETE del contrato responden 204 sin cuerpo, así que resuelve a `void`.
+ * Sustituye los marcadores en la plantilla y delega en `request`. Lanza
+ * `ApiError` ante fallo de red o status no-2xx.
+ */
+export async function apiDeletePath<P extends DeletePathsWithParams>(
+  path: P,
+  params: PathParamsOf<paths[P]["delete"]>,
+  options?: ApiRequestOptions
+): Promise<void> {
+  const resolvedPath = buildPath(path, params as Record<string, unknown>);
+  await request(resolvedPath, "DELETE", undefined, options);
 }

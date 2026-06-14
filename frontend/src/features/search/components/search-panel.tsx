@@ -172,6 +172,7 @@ export function SearchPanel() {
               <ResultCard
                 key={result.canonical_product.id}
                 result={result}
+                zoneId={zoneId}
               />
             ))}
           </div>

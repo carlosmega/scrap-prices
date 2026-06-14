@@ -10,11 +10,19 @@
  */
 import { ExternalLink } from "lucide-react";
 
+import { AddToQuoteButton } from "@/features/lists/components/add-to-quote-button";
 import { formatPrice, sortPricesAsc } from "@/features/search/format";
 import { freshnessLabel } from "@/features/search/relative-time";
 import type { ProductPrice } from "../types";
 
-export function ProductPrices({ prices }: { prices: ProductPrice[] }) {
+export function ProductPrices({
+  prices,
+  zoneId,
+}: {
+  prices: ProductPrice[];
+  /** Zona activa; se propaga al botón "Agregar a mi cotización". */
+  zoneId: string | null;
+}) {
   const ordered = sortPricesAsc(prices);
 
   return (
@@ -54,12 +62,19 @@ export function ProductPrices({ prices }: { prices: ProductPrice[] }) {
             </div>
 
             {hasPrice ? (
-              <span
-                className="text-base font-semibold tabular-nums text-foreground"
-                data-testid="product-retailer-price"
-              >
-                {formatPrice(entry.price as string, entry.currency)}
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  className="text-base font-semibold tabular-nums text-foreground"
+                  data-testid="product-retailer-price"
+                >
+                  {formatPrice(entry.price as string, entry.currency)}
+                </span>
+                <AddToQuoteButton
+                  retailerProductId={entry.retailer_product_id}
+                  zoneId={zoneId}
+                  label="Agregar"
+                />
+              </div>
             ) : (
               <span
                 className="text-sm text-muted-foreground"

@@ -1,4 +1,5 @@
 import { ProductDetail } from "@/features/products/components/product-detail";
+import { QuoteBadge } from "@/features/lists/components/quote-badge";
 
 /**
  * Ruta de detalle de producto (`/products/[id]`, F021).
@@ -18,6 +19,10 @@ export default async function ProductPage({
 
   return (
     <main className="flex min-h-screen flex-col items-center gap-8 bg-background p-8">
+      <div className="flex w-full max-w-2xl items-center justify-end">
+        <QuoteBadge />
+      </div>
+
       <ProductDetail id={id} />
     </main>
   );
