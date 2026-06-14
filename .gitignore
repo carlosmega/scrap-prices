@@ -20,5 +20,9 @@ test-results/
 .env
 .env.local
 
+# Reconocimiento de scraping: HARs locales (pueden contener cookies/headers; no versionar)
+docs/recon/har/
+*.har
+
 # Claude Code (config personal, no del equipo)
 .claude/settings.local.json
