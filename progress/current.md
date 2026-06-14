@@ -2,13 +2,17 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F011** — Reconocimiento Construrama (Fase 0)
-**Spec:** `specs/F011-recon-construrama.md`
+**Feature en curso:** ninguna
+**Plan:** —
+**Estado:** Reconocimiento M1 (Fase 0) **completo**: F010 Home Depot ✅ + F011 Construrama ✅
+(docs en `docs/recon/`). `./init.sh` verde.
 
-## Plan F011 (capa docs)
-HAR humano: `docs/recon/har/www.construrama.com.har` (6 MB, 178 entries, 42 JSON; mucho ruido de
-analytics). Un subagente lo analiza **offline** y transcribe a `docs/recon/construrama.md`.
-Punto clave del PRD §14: **confirmar si el precio es XHR o requiere render JS** (→ source xhr/html/playwright).
-ToS = veredicto humano (PENDIENTE). Sin cookies/PII en el .md. Reviewer verifica completitud + privacidad.
+## Gate humano antes de M2 (scraping real)
+1. **Revisión de ToS/robots** de ambos sitios (decisión legal de Carlos) — hoy `scraper_status=paused`.
+2. **Home Depot:** técnicamente listo (XHR JSON, sin anti-bot). Endpoint y tienda Monterrey documentados.
+3. **Construrama:** precio vía Algolia (`source=xhr`), pero **WAF Imperva** → validar plan A (Algolia
+   directo) vs plan B (Playwright); además falta **2ª captura** (store-id del distribuidor + bodies de
+   Algolia/setStoresByCity/get-algolia). Ver `docs/recon/construrama.md` §6.
 
-**Estado:** F011 `in_progress`. (F010 Home Depot ✅.) Lanzando análisis del HAR.
+Siguiente `pending`: **F012** (script read-only Fase 1) — BLOQUEADA hasta ToS + (Construrama) 2ª captura.
+Luego **M2** (adapters + ingestión + Celery + golden fixtures) reemplaza el `seed`.

@@ -144,7 +144,7 @@
     "titulo": "M1 Reconocimiento Construrama (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
     "capas": ["docs"],
     "spec": "specs/F011-recon-construrama.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F012",
