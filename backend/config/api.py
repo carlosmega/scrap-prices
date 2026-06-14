@@ -7,6 +7,7 @@ comando de contrato funcione tal cual:
 
 from ninja import NinjaAPI
 
+from apps.catalog.api import router as catalog_router
 from apps.core.api import router as core_router
 from apps.geo.api import router as geo_router
 
@@ -18,3 +19,4 @@ api = NinjaAPI(
 
 api.add_router("", core_router)
 api.add_router("", geo_router)
+api.add_router("", catalog_router)

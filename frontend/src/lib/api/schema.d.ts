@@ -64,6 +64,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buscar
+         * @description Busca canónicos por `q` con su precio más fresco por retailer en la zona.
+         *
+         *     404 si `zone_id` no existe o está inactiva (el service devuelve None).
+         */
+        get: operations["apps_catalog_api_buscar"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -99,6 +121,68 @@ export interface components {
             lat: number;
             /** Lng */
             lng: number;
+        };
+        /**
+         * CanonicalProductRefOut
+         * @description Subconjunto público del producto canónico para el resultado de búsqueda.
+         */
+        CanonicalProductRefOut: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Category */
+            category: string;
+            /** Unit */
+            unit: string;
+        };
+        /**
+         * PriceByRetailerOut
+         * @description Precio más fresco de un retailer para un canónico en una zona.
+         *
+         *     `price`/`captured_at` son None cuando el retailer no tiene observación en la
+         *     zona (entonces `is_available=False`). `price` se serializa como string del
+         *     Decimal para no perder exactitud monetaria (PRD §8).
+         */
+        PriceByRetailerOut: {
+            retailer: components["schemas"]["RetailerRefOut"];
+            /** Retailer Product Id */
+            retailer_product_id: string;
+            /** Price */
+            price?: string | null;
+            /**
+             * Currency
+             * @default MXN
+             */
+            currency: string;
+            /**
+             * Is Available
+             * @default false
+             */
+            is_available: boolean;
+            /** Captured At */
+            captured_at?: string | null;
+            /** Url */
+            url: string;
+        };
+        /**
+         * RetailerRefOut
+         * @description Referencia mínima a un retailer dentro de un precio.
+         */
+        RetailerRefOut: {
+            /** Slug */
+            slug: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * SearchResultOut
+         * @description Un producto canónico matcheado con sus precios por retailer en la zona.
+         */
+        SearchResultOut: {
+            canonical_product: components["schemas"]["CanonicalProductRefOut"];
+            /** Prices */
+            prices: components["schemas"]["PriceByRetailerOut"][];
         };
     };
     responses: never;
@@ -169,6 +253,30 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ZoneOut"];
+                };
+            };
+        };
+    };
+    apps_catalog_api_buscar: {
+        parameters: {
+            query: {
+                q: string;
+                zone_id: string;
+                sort?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description OK */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SearchResultOut"][];
                 };
             };
         };

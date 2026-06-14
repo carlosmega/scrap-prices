@@ -88,6 +88,62 @@
           "required": true
         }
       }
+    },
+    "/api/search": {
+      "get": {
+        "operationId": "apps_catalog_api_buscar",
+        "summary": "Buscar",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "q",
+            "schema": {
+              "title": "Q",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "zone_id",
+            "schema": {
+              "title": "Zone Id",
+              "type": "string"
+            },
+            "required": true
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "schema": {
+              "default": "price",
+              "title": "Sort",
+              "type": "string"
+            },
+            "required": false
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SearchResultOut"
+                  },
+                  "title": "Response",
+                  "type": "array"
+                }
+              }
+            }
+          }
+        },
+        "description": "Busca canónicos por `q` con su precio más fresco por retailer en la zona.\n\n404 si `zone_id` no existe o está inactiva (el service devuelve None).",
+        "tags": [
+          "catalog"
+        ]
+      }
     }
   },
   "components": {
@@ -152,6 +208,132 @@
           "lng"
         ],
         "title": "ResolveIn",
+        "type": "object"
+      },
+      "CanonicalProductRefOut": {
+        "description": "Subconjunto público del producto canónico para el resultado de búsqueda.",
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "category": {
+            "title": "Category",
+            "type": "string"
+          },
+          "unit": {
+            "title": "Unit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "category",
+          "unit"
+        ],
+        "title": "CanonicalProductRefOut",
+        "type": "object"
+      },
+      "PriceByRetailerOut": {
+        "description": "Precio más fresco de un retailer para un canónico en una zona.\n\n`price`/`captured_at` son None cuando el retailer no tiene observación en la\nzona (entonces `is_available=False`). `price` se serializa como string del\nDecimal para no perder exactitud monetaria (PRD §8).",
+        "properties": {
+          "retailer": {
+            "$ref": "#/components/schemas/RetailerRefOut"
+          },
+          "retailer_product_id": {
+            "title": "Retailer Product Id",
+            "type": "string"
+          },
+          "price": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price"
+          },
+          "currency": {
+            "default": "MXN",
+            "title": "Currency",
+            "type": "string"
+          },
+          "is_available": {
+            "default": false,
+            "title": "Is Available",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Captured At"
+          },
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retailer",
+          "retailer_product_id",
+          "url"
+        ],
+        "title": "PriceByRetailerOut",
+        "type": "object"
+      },
+      "RetailerRefOut": {
+        "description": "Referencia mínima a un retailer dentro de un precio.",
+        "properties": {
+          "slug": {
+            "title": "Slug",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "slug",
+          "name"
+        ],
+        "title": "RetailerRefOut",
+        "type": "object"
+      },
+      "SearchResultOut": {
+        "description": "Un producto canónico matcheado con sus precios por retailer en la zona.",
+        "properties": {
+          "canonical_product": {
+            "$ref": "#/components/schemas/CanonicalProductRefOut"
+          },
+          "prices": {
+            "items": {
+              "$ref": "#/components/schemas/PriceByRetailerOut"
+            },
+            "title": "Prices",
+            "type": "array"
+          }
+        },
+        "required": [
+          "canonical_product",
+          "prices"
+        ],
+        "title": "SearchResultOut",
         "type": "object"
       }
     }

@@ -74,7 +74,7 @@
     "titulo": "M3 API: busqueda (GET /api/search?q=&zone_id=&sort=price)",
     "capas": ["backend", "frontend"],
     "spec": "specs/F015-api-busqueda.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F016",
