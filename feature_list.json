@@ -71,5 +71,32 @@
     ],
     "spec": "specs/F009-modelo-listas-cotizacion.md",
     "status": "done"
+  },
+  {
+    "id": "F010",
+    "titulo": "M1 Reconocimiento Home Depot MX (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
+    "capas": [
+      "docs"
+    ],
+    "spec": "specs/F010-recon-homedepot.md",
+    "status": "pending"
+  },
+  {
+    "id": "F011",
+    "titulo": "M1 Reconocimiento Construrama (Fase 0) - GATE HUMANO: DevTools/HAR + ToS",
+    "capas": [
+      "docs"
+    ],
+    "spec": "specs/F011-recon-construrama.md",
+    "status": "pending"
+  },
+  {
+    "id": "F012",
+    "titulo": "M1 Script de reconocimiento read-only (Fase 1) - BLOQUEADA: requiere F010+F011 + ToS + red",
+    "capas": [
+      "backend"
+    ],
+    "spec": "specs/F012-script-reconocimiento.md",
+    "status": "pending"
   }
 ]
