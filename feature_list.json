@@ -116,14 +116,14 @@
     "titulo": "M4 UI: detalle de producto + historial de precio",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F021-ui-detalle-producto.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F022",
     "titulo": "M4 UI: lista de cotizacion con snapshots, subtotal y total",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F022-ui-lista-cotizacion.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F010",

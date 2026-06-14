@@ -56,6 +56,33 @@ type GetPathsWithQuery = {
 }[GetPaths];
 
 /**
+ * Parámetros de ruta de un GET (p.ej. `{ id }` en `/api/products/{id}`),
+ * derivados del contrato. Resuelve a `never` cuando la operación no declara
+ * `path`; en ese caso se usa `apiGet`/`apiGetQuery`.
+ */
+type GetPathParams<P extends GetPaths> = paths[P]["get"] extends {
+  parameters: { path: infer T };
+}
+  ? T
+  : never;
+
+/** Solo las rutas GET cuya operación declara parámetros de ruta (`{id}`). */
+type GetPathsWithParams = {
+  [P in GetPaths]: [GetPathParams<P>] extends [never] ? never : P;
+}[GetPaths];
+
+/**
+ * Parámetros de query de un GET cuando pueden ser opcionales. A diferencia de
+ * `GetQuery`, no exige que `query` exista: resuelve a `never` si la operación no
+ * la declara, para componerlo con los parámetros de ruta.
+ */
+type GetOptionalQuery<P extends GetPaths> = paths[P]["get"] extends {
+  parameters: { query: infer Q };
+}
+  ? Q
+  : never;
+
+/**
  * JSON de la respuesta exitosa (200 o 201) de un método/ruta, derivado del
  * contrato. Si la respuesta no tiene cuerpo JSON (p.ej. 204), resuelve a
  * `never` aquí; los helpers sin cuerpo (DELETE) lo tratan aparte.
@@ -110,6 +137,22 @@ export class ApiError extends Error {
 function buildUrl(path: string): string {
   const base = env.apiUrl.replace(/\/+$/, "");
   return `${base}${path}`;
+}
+
+/**
+ * Sustituye los marcadores `{nombre}` de una plantilla de ruta del contrato
+ * (p.ej. `/api/products/{id}`) por los valores de `params`, codificando cada uno
+ * para la URL. Mantiene la plantilla como única fuente de verdad: el `path` que
+ * recibe el helper sigue siendo una clave literal del schema.
+ */
+function buildPath(template: string, params: Record<string, unknown>): string {
+  return template.replace(/\{([^}]+)\}/g, (_, name: string) => {
+    const value = params[name];
+    if (value === undefined || value === null) {
+      throw new ApiError(`Falta el parámetro de ruta "${name}".`, 0);
+    }
+    return encodeURIComponent(String(value));
+  });
 }
 
 /**
@@ -214,6 +257,36 @@ export async function apiGetQuery<P extends GetPathsWithQuery>(
 ): Promise<GetJson200<P>> {
   const queryString = buildQueryString(query as Record<string, unknown>);
   const response = await request(`${path}${queryString}`, "GET", undefined, options);
+  return (await response.json()) as GetJson200<P>;
+}
+
+/**
+ * GET tipado para rutas con parámetros de ruta (`{id}`) y, opcionalmente, query.
+ *
+ * El `path` solo acepta rutas GET cuya operación declara `path` en el contrato;
+ * `params` queda tipado por esa forma exacta (p.ej. `{ id: string }`) y `query`
+ * por su `query` del contrato (`{ zone_id }` en `/api/products/{id}`). Sustituye
+ * los marcadores en la plantilla, serializa la query y delega en `request`.
+ * Cero `any`, cero tipos a mano. Lanza `ApiError` ante fallo de red o no-2xx
+ * (p.ej. 404 cuando el producto/zona no existe).
+ */
+export async function apiGetPath<P extends GetPathsWithParams>(
+  path: P,
+  params: GetPathParams<P>,
+  query?: GetOptionalQuery<P>,
+  options?: ApiRequestOptions
+): Promise<GetJson200<P>> {
+  const resolvedPath = buildPath(path, params as Record<string, unknown>);
+  const queryString =
+    query === undefined
+      ? ""
+      : buildQueryString(query as Record<string, unknown>);
+  const response = await request(
+    `${resolvedPath}${queryString}`,
+    "GET",
+    undefined,
+    options
+  );
   return (await response.json()) as GetJson200<P>;
 }
 

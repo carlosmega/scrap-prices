@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-14 · **F021** M4 UI detalle de producto + historial (ruta app/products/[id]; specs aplanados, precios por retailer con frescura+enlace a ficha, historial ordenado; resultados de F020 enlazan al detalle; helper `apiGetPath` tipado path+query) · APROBADO 1er ciclo · `./init.sh --e2e` verde (4 E2E). Informe `impl_F021_frontend.md`, review `review_F021.md`.
 - 2026-06-14 · **F020** M4 UI búsqueda + resultados comparados (input + resultados por retailer con precio/disponibilidad/frescura "hace X"/orden por precio; usa zona de F019; `apiGetQuery` tipado; fix sync in-tab de useSelectedZone) · APROBADO 1er ciclo · `./init.sh --e2e` verde; E2E search.spec varilla MTY ambos retailers. Informe `impl_F020_frontend.md`, review `review_F020.md`.
 - 2026-06-14 · **F019** M4 UI selección de zona (shell home + selector shadcn Select; `useSelectedZone()` persistente en localStorage con sync entre pestañas; geolocalización→resolve con "sin cobertura"; placeholder F003 eliminado) · APROBADO 1er ciclo · `./init.sh --e2e` verde (33 ok); E2E webServer con migrate+seed; test de persistencia. Informe `impl_F019_frontend.md`, review `review_F019.md`.
 - 2026-06-14 · **F018** M3 API retailers interno (GET /api/retailers → RetailerOut[] con scraper_status/pricing_model, orden por name) · APROBADO 1er ciclo · `./init.sh` verde, Fase 5 sin drift. **🎉 M3 (API) completo (F013–F018).** Informes `impl_F018_{backend,frontend}.md`, review `review_F018.md`.

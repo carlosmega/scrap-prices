@@ -2,15 +2,15 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F021** — UI detalle de producto + historial
-**Spec:** `specs/F021-ui-detalle-producto.md`
+**Feature en curso:** **F022** — UI lista de cotización (snapshots, subtotal, total)
+**Spec:** `specs/F022-ui-lista-cotizacion.md`
 
-## Plan F021 (frontend + e2e → implementer-frontend)
-- Ruta `app/products/[id]/page.tsx`: lee id + zona (useSelectedZone) → GET /api/products/{id}.
-  Render: specs del canónico, precios por retailer (frescura + enlace ficha), historial ordenado.
-  Enlazar resultados de F020 al detalle. Estados + 404 + sin-zona. Reusa helper "hace X" (F020).
-- E2E `detail.spec.ts`: búsqueda → detalle → precios por retailer + historial.
+## Plan F022 (frontend + e2e → implementer-frontend) — última del MVP
+- `getSessionKey()` (UUID en localStorage) → header `X-Session-Key` en /api/lists*.
+- Botón "Agregar a mi cotización" en búsqueda/detalle (crea lista por defecto si no hay).
+- Página de lista: ítems con snapshot + cantidad + line_total + subtotal/total; editar cantidad; quitar.
+- E2E `quote.spec.ts`: agregar → ver snapshot+total → editar cantidad → quitar.
 
-Cierre: `./init.sh --e2e` verde + tsc/lint/build/test:unit + review APROBADO.
+Cierre: `./init.sh --e2e` verde + tsc/lint/build/test:unit + review APROBADO. → **MVP M4 completo.**
 
-**Estado:** F021 `in_progress`. M4: F019 ✅ F020 ✅ → **F021** → F022 (última del MVP).
+**Estado:** F022 `in_progress`. M4: F019 ✅ F020 ✅ F021 ✅ → **F022** (última).

@@ -7,6 +7,8 @@
  * Las filas se ordenan con el menor precio primero (B1·CA4) y un retailer sin
  * precio en la zona se indica explícitamente (B1·CA5).
  */
+import Link from "next/link";
+
 import {
   Card,
   CardContent,
@@ -25,7 +27,15 @@ export function ResultCard({ result }: { result: SearchResult }) {
   return (
     <Card className="w-full" data-testid="search-result">
       <CardHeader>
-        <CardTitle>{product.name}</CardTitle>
+        <CardTitle>
+          <Link
+            href={`/products/${product.id}`}
+            className="underline-offset-4 hover:underline"
+            data-testid="search-result-link"
+          >
+            {product.name}
+          </Link>
+        </CardTitle>
         <p className="text-sm text-muted-foreground">
           {product.category} · por {product.unit}
         </p>
