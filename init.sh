@@ -144,10 +144,17 @@ if [ -f backend/manage.py ]; then
       uv run python manage.py makemigrations --check --dry-run
   run "pytest" uv run pytest -q
   # Arquitectura limpia: ninguna llamada al ORM en los routers (api.py).
+  # Nota: `.delete()` del ORM (parens vacíos) se distingue del decorador Ninja
+  # `@router.delete("/ruta")`; además se filtran las líneas de decoradores HTTP
+  # (get/post/put/patch/delete) para no dar falsos positivos. import-linter es la
+  # garantía autoritativa (api no importa models); este grep es backup heurístico.
   api_files=$(find apps -name api.py 2>/dev/null)
   if [ -n "$api_files" ]; then
-    if echo "$api_files" | xargs grep -nE '\.objects|\.save\(|\.filter\(|\.create\(|\.delete\(' >/dev/null 2>&1; then
-      bad "arquitectura: hay llamadas al ORM en apps/*/api.py (la lógica va en services.py)"
+    orm_hits=$(echo "$api_files" | xargs grep -nE '\.objects\b|\.save\(|\.filter\(|\.create\(|\.delete\(\s*\)' 2>/dev/null \
+      | grep -vE '@?(router|api)\.(get|post|put|patch|delete)\(' || true)
+    if [ -n "$orm_hits" ]; then
+      bad "arquitectura: posible llamada al ORM en apps/*/api.py (la lógica va en services.py)"
+      echo "$orm_hits" | tail -n 10 | sed 's/^/      /'
     else
       ok "arquitectura: routers (api.py) sin llamadas al ORM"
     fi
@@ -177,7 +184,7 @@ if [ -f frontend/package.json ]; then
   fi
   # Arquitectura limpia: ningún fetch fuera de src/lib/api/client.ts.
   if [ -d src ]; then
-    stray=$(grep -rn "fetch(" src --include=*.ts --include=*.tsx 2>/dev/null | grep -v "lib/api/client.ts" || true)
+    stray=$(grep -rnE "\bfetch\(" src --include=*.ts --include=*.tsx 2>/dev/null | grep -v "lib/api/client.ts" || true)
     if [ -n "$stray" ]; then
       bad "arquitectura: hay fetch( fuera de src/lib/api/client.ts"
       echo "$stray" | tail -n 10 | sed 's/^/      /'
