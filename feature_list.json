@@ -102,7 +102,7 @@
     "titulo": "M4 UI: seleccion de zona (persistente en sesion)",
     "capas": ["frontend", "e2e"],
     "spec": "specs/F019-ui-seleccion-zona.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F020",

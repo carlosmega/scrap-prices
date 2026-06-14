@@ -28,8 +28,11 @@ export default defineConfig({
   ],
   webServer: [
     {
-      // Backend Django + Ninja con SQLite. /api/health es estático: no toca DB.
-      command: "uv run python manage.py runserver 127.0.0.1:8000",
+      // Backend Django + Ninja con SQLite. Antes de servir aplica migraciones
+      // y siembra el grafo demo (Monterrey Metro · varilla) para que la UI
+      // tenga zonas reales que listar (F019). `seed` es idempotente.
+      command:
+        "uv run python manage.py migrate && uv run python manage.py seed && uv run python manage.py runserver 127.0.0.1:8000",
       cwd: "../backend",
       url: "http://127.0.0.1:8000/api/health",
       reuseExistingServer: !process.env.CI,

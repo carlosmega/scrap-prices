@@ -2,6 +2,7 @@
 
 > Una línea por feature cerrada: fecha, id, resumen de 1-2 frases, ciclos de review.
 
+- 2026-06-14 · **F019** M4 UI selección de zona (shell home + selector shadcn Select; `useSelectedZone()` persistente en localStorage con sync entre pestañas; geolocalización→resolve con "sin cobertura"; placeholder F003 eliminado) · APROBADO 1er ciclo · `./init.sh --e2e` verde (33 ok); E2E webServer con migrate+seed; test de persistencia. Informe `impl_F019_frontend.md`, review `review_F019.md`.
 - 2026-06-14 · **F018** M3 API retailers interno (GET /api/retailers → RetailerOut[] con scraper_status/pricing_model, orden por name) · APROBADO 1er ciclo · `./init.sh` verde, Fase 5 sin drift. **🎉 M3 (API) completo (F013–F018).** Informes `impl_F018_{backend,frontend}.md`, review `review_F018.md`.
 - 2026-06-14 · **F017** M3 API listas de cotización (8 endpoints CRUD anónimo por `X-Session-Key`; snapshot inmutable de precio; scoping cross-session 404; subtotal/total; client.ts gana apiPost/apiPatch/apiDelete) · APROBADO 2º intento (1er RECHAZO = falso positivo del grep de init.sh con `@router.delete`, corregido por el líder commit `37ecf36`) · `./init.sh` verde, 28 tests. Informes `impl_F017_{backend,frontend}.md`, review `review_F017.md`.
 - 2026-06-13 · **F016** M3 API detalle de producto + historial (GET /api/products/{id}: canónico+specs, prices por retailer reusando F015, history últimas 20 obs orden -captured_at; 404 producto/zona) · APROBADO 1er ciclo · `./init.sh` verde, Fase 5 sin drift. Informes `impl_F016_{backend,frontend}.md`, review `review_F016.md`.
