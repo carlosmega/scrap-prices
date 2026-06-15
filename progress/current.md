@@ -2,15 +2,21 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** M2 Home Depot completo y operable, con la **tienda real de Monterrey (1333)** en el seed (F028).
-Listo para la **corrida real de HD** en el entorno del humano:
-`uv run python manage.py scrape --retailer home-depot --zone monterrey-metro --category varilla --dry-run`.
-`./init.sh` verde.
+**Feature en curso:** **F029** — HD búsqueda real (profileName + marketId/stLocId)
+**Spec:** `specs/F029-hd-busqueda-params.md`
 
-## Pendientes
-- **F026 Construrama:** captura del body de Algolia.
-- **M5:** Celery beat (programar scrape), CI, logging, fuzzy matching, export.
-- Si la corrida real de HD revela que el endpoint de búsqueda necesita `stLocId=18503`/`marketId=10`
-  (recon §2.2), ajustar el adapter (follow-up).
+## Descubierto en la corrida real (el líder SÍ tiene red desde el sandbox)
+`scrape --dry-run` corrió en vivo sin bloqueo pero trajo **0 productos**: la búsqueda de HD
+necesita `profileName=HCL_V2_findProductsBySearchTermWithPrice` + `marketId=10` + `stLocId=18503`
+(id interno ≠ external_id 1333). Confirmado vía WebFetch: con esos params → 13 varillas; sin ellos → total:0.
+El endpoint por `partNumber` ya funcionaba ($20,068).
+
+## Plan F029 (capa backend → implementer-backend)
+1. geo: `RetailerLocation.extra` JSONField (+ migración).
+2. seed: HD Monterrey `extra={"market_id":"10","st_loc_id":"18503"}`.
+3. adapter: `_build_search_url` añade profileName + limit/offset + marketId/stLocId desde `extra`.
+4. test unit de la URL; offline tests siguen verdes.
+
+Tras review, el líder **re-corre el `--dry-run` en vivo** para confirmar ~13 varillas.
+
+**Estado:** F029 `in_progress`.
