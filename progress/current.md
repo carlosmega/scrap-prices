@@ -2,16 +2,21 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F027** — Comando `manage.py scrape` (M2 operabilidad)
-**Spec:** `specs/F027-cmd-scrape.md`
+**Feature en curso:** ninguna
+**Plan:** —
+**Estado:** **M2 Home Depot completo y operable** (F024 infra + F025 adapter/ingestión + F027 comando
+`manage.py scrape`). Todo respetuoso (UA honesto, rate-limit, stop-if-blocked) y probado offline.
+`./init.sh` verde.
 
-## Plan F027 (capa backend → implementer-backend)
-Comando `scrape --retailer --zone --category --dry-run` que envuelve la ingestión de F025:
-resuelve Retailer/Zone/RetailerLocation, registro de adapters (home-depot→ingest_homedepot;
-construrama→"no disponible aún"), `--dry-run` hace fetch real e imprime sin escribir, respeta
-stop-if-blocked. Tests offline (MockTransport + golden fixture): dry-run no escribe, real ingiere,
-errores claros, 429→reporta sin evadir.
+## Siguiente acción = del humano: corrida real de HD en su entorno
+```
+cd backend && uv run python manage.py seed
+uv run python manage.py scrape --retailer home-depot --zone monterrey-metro --category varilla --dry-run
+# si se ve bien (sin --dry-run, ingiere a PriceObservation):
+uv run python manage.py scrape --retailer home-depot --zone monterrey-metro --category varilla
+```
 
-Objetivo: dar al humano un comando seguro para la **corrida real de Home Depot** en su entorno.
-
-**Estado:** F027 `in_progress`. M2: F024 ✅ F025 ✅ → **F027** (comando). F026 Construrama pendiente de captura Algolia.
+## Pendientes
+- **F026 Construrama:** bloqueada por captura del body de Algolia (2ª captura HAR o ejemplo).
+- **F012:** script recon (opcional, superado).
+- **M5:** Celery beat (programar `scrape`), CI (GitHub Actions con `./init.sh`), logging/observabilidad, fuzzy matching, export CSV.
