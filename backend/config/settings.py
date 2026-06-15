@@ -22,6 +22,21 @@ env = environ.Env(
     REDIS_URL=(str, "redis://localhost:6379/0"),
     # CORS: el frontend de Next vive en :3300 y consume la API en :8800 (F023).
     CORS_ALLOWED_ORIGINS=(list, ["http://localhost:3300"]),
+    # --- Scraping (F024) ---------------------------------------------------
+    # User-Agent HONESTO: identifica a ConstruScan y deja un contacto. NUNCA un
+    # UA que imite a un navegador real para engañar (guardrail §2.3).
+    SCRAPER_USER_AGENT=(str, "ConstruScan/0.1 (+https://construscan.example/contacto)"),
+    # Delay mínimo entre 2 peticiones al MISMO dominio (cortesía / rate-limit).
+    # Default conservador (≥ crawl-delay típico). En segundos.
+    SCRAPER_MIN_DELAY_SECONDS=(float, 7.0),
+    # Timeout de cada petición HTTP, en segundos.
+    SCRAPER_TIMEOUT_SECONDS=(float, 30.0),
+    # Concurrencia máxima simultánea por dominio (semáforo). 1 = estrictamente
+    # secuencial por dominio (lo más respetuoso).
+    SCRAPER_MAX_CONCURRENCY_PER_DOMAIN=(int, 1),
+    # Reintentos para errores TRANSITORIOS (timeout/5xx/red). NO aplica a
+    # bloqueos 403/429: ante bloqueo se detiene, no se reintenta (§2.3).
+    SCRAPER_MAX_RETRIES=(int, 3),
 )
 
 # Lee un .env de la raíz del backend si existe (no requerido).
@@ -51,6 +66,7 @@ INSTALLED_APPS = [
     "apps.catalog",
     "apps.prices",
     "apps.lists",
+    "apps.scraping",
 ]
 
 # --- Middleware -------------------------------------------------------------
@@ -124,3 +140,13 @@ CELERY_BROKER_URL = env("REDIS_URL")
 CELERY_RESULT_BACKEND = env("REDIS_URL")
 CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=False)
 CELERY_TIMEZONE = TIME_ZONE
+
+# --- Scraping (F024) --------------------------------------------------------
+# Guardrails éticos del PRD §2.3 cableados como configuración. Los defaults son
+# conservadores y honestos; el entorno solo los ajusta, nunca los desactiva
+# para evadir defensas (eso sería violar el principio del proyecto).
+SCRAPER_USER_AGENT = env("SCRAPER_USER_AGENT")
+SCRAPER_MIN_DELAY_SECONDS = env.float("SCRAPER_MIN_DELAY_SECONDS")
+SCRAPER_TIMEOUT_SECONDS = env.float("SCRAPER_TIMEOUT_SECONDS")
+SCRAPER_MAX_CONCURRENCY_PER_DOMAIN = env.int("SCRAPER_MAX_CONCURRENCY_PER_DOMAIN")
+SCRAPER_MAX_RETRIES = env.int("SCRAPER_MAX_RETRIES")

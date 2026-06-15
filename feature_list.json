@@ -158,14 +158,14 @@
     "titulo": "M2 infra de scraping: BaseRetailerAdapter + httpx rate-limit/tenacity + UA honesto + stop-if-blocked (NO evasion)",
     "capas": ["backend"],
     "spec": "specs/F024-scraping-infra.md",
-    "status": "in_progress"
+    "status": "done"
   },
   {
     "id": "F025",
     "titulo": "M2 HomeDepotAdapter: parser (golden fixtures del HAR) + ingestion a PriceObservation/ScrapeRun + tarea Celery",
     "capas": ["backend"],
     "spec": "specs/F025-adapter-homedepot.md",
-    "status": "pending"
+    "status": "in_progress"
   },
   {
     "id": "F026",
