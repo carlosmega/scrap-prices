@@ -19,7 +19,7 @@
  * - Los totales (`subtotal`/`total`/`line_total`) vienen del backend; la UI NUNCA
  *   recalcula precios.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 
 import {
   addItem as apiAddItem,
@@ -47,14 +47,41 @@ export type QuoteState =
 
 // --- Store a nivel de módulo: estado único + suscriptores in-tab ------------
 
-let quoteState: QuoteState = { status: "idle" };
-const listeners = new Set<(state: QuoteState) => void>();
+/**
+ * Snapshot del servidor (y del primer render del cliente, en hidratación):
+ * SIEMPRE `idle`, el default sin tocar `localStorage` ni el backend. Es una
+ * referencia estable y compartida para que SSR y el primer paint del cliente
+ * coincidan (F030, sin hydration mismatch). El estado real se puebla tras montar
+ * vía `load()` (`useEffect` en los consumidores).
+ */
+const SERVER_SNAPSHOT: QuoteState = { status: "idle" };
+
+let quoteState: QuoteState = SERVER_SNAPSHOT;
+const listeners = new Set<() => void>();
 
 function setQuoteState(next: QuoteState): void {
   quoteState = next;
   for (const listener of listeners) {
-    listener(next);
+    listener();
   }
+}
+
+/** Snapshot actual del store (cliente): referencia estable entre renders. */
+function getQuoteSnapshot(): QuoteState {
+  return quoteState;
+}
+
+/** Snapshot SSR / primer render cliente: siempre el default `idle`. */
+function getQuoteServerSnapshot(): QuoteState {
+  return SERVER_SNAPSHOT;
+}
+
+/** Suscripción in-tab al store de la cotización. */
+function subscribeQuote(onStoreChange: () => void): () => void {
+  listeners.add(onStoreChange);
+  return () => {
+    listeners.delete(onStoreChange);
+  };
 }
 
 /** Lee el id de la lista por defecto cacheado (o `null`). */
@@ -150,16 +177,13 @@ export interface UseQuote {
 }
 
 export function useQuote(): UseQuote {
-  const [state, setState] = useState<QuoteState>(quoteState);
-
-  useEffect(() => {
-    listeners.add(setState);
-    // Sincroniza por si el store cambió entre el render y el efecto.
-    setState(quoteState);
-    return () => {
-      listeners.delete(setState);
-    };
-  }, []);
+  // SSR-safe: el server snapshot es `idle`; tras montar, `useSyncExternalStore`
+  // lee el store real y se mantiene suscrito a los cambios in-tab.
+  const state = useSyncExternalStore(
+    subscribeQuote,
+    getQuoteSnapshot,
+    getQuoteServerSnapshot
+  );
 
   const load = useCallback(() => {
     const sessionKey = getSessionKey();
