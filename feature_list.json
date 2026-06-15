@@ -173,5 +173,12 @@
     "capas": ["backend"],
     "spec": "specs/F026-adapter-construrama.md",
     "status": "pending"
+  },
+  {
+    "id": "F027",
+    "titulo": "M2 comando manage.py scrape (--retailer/--zone/--category/--dry-run) para la corrida real",
+    "capas": ["backend"],
+    "spec": "specs/F027-cmd-scrape.md",
+    "status": "in_progress"
   }
 ]
