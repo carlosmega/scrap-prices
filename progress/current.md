@@ -2,17 +2,21 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** Reconocimiento M1 (Fase 0) **completo**: F010 Home Depot ✅ + F011 Construrama ✅
-(docs en `docs/recon/`). `./init.sh` verde.
+**Feature en curso:** **F024** — Infraestructura de scraping (M2)
+**Spec:** `specs/F024-scraping-infra.md`
 
-## Gate humano antes de M2 (scraping real)
-1. **Revisión de ToS/robots** de ambos sitios (decisión legal de Carlos) — hoy `scraper_status=paused`.
-2. **Home Depot:** técnicamente listo (XHR JSON, sin anti-bot). Endpoint y tienda Monterrey documentados.
-3. **Construrama:** precio vía Algolia (`source=xhr`), pero **WAF Imperva** → validar plan A (Algolia
-   directo) vs plan B (Playwright); además falta **2ª captura** (store-id del distribuidor + bodies de
-   Algolia/setStoresByCity/get-algolia). Ver `docs/recon/construrama.md` §6.
+## Decisión (2026-06-15): scraping RESPETUOSO de HD y Construrama
+El humano revisó el ToS de **ambos** retailers y determinó que no prohíben la extracción
+(su decisión de dueño, como en HD). Se procede con M2, pero **solo de forma respetuosa**:
+UA honesto, rate-limit (≥ crawl-delay), backoff, y **stop-if-blocked** (si bloquea → `non_viable`,
+no se evade). **NO** se construye disimulo/evasión/anti-captcha/anti-WAF (se mantiene el rechazo previo).
+- HD: vía endpoint XHR (payload en el HAR → fixtures listas).
+- Construrama: vía **endpoint público de Algolia** (caveat: key de CEMEX; riesgo que asume el humano).
+  Hueco técnico: el HAR no guardó el body de Algolia → falta 2ª captura (o ejemplo de corrida en vivo)
+  para el parser de F026.
+- La corrida REAL (red) corre en el entorno del humano, no en el arnés/CI; los tests son offline.
 
-Siguiente `pending`: **F012** (script read-only Fase 1) — BLOQUEADA hasta ToS + (Construrama) 2ª captura.
-Luego **M2** (adapters + ingestión + Celery + golden fixtures) reemplaza el `seed`.
+## Plan M2
+F024 infra (base adapter + cliente respetuoso) → F025 HomeDepotAdapter (completo) → F026 Construrama (tras captura Algolia).
+
+**Estado:** F024 `in_progress`. Lanzando implementer-backend (infra, offline).

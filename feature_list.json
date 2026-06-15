@@ -152,5 +152,26 @@
     "capas": ["backend"],
     "spec": "specs/F012-script-reconocimiento.md",
     "status": "pending"
+  },
+  {
+    "id": "F024",
+    "titulo": "M2 infra de scraping: BaseRetailerAdapter + httpx rate-limit/tenacity + UA honesto + stop-if-blocked (NO evasion)",
+    "capas": ["backend"],
+    "spec": "specs/F024-scraping-infra.md",
+    "status": "in_progress"
+  },
+  {
+    "id": "F025",
+    "titulo": "M2 HomeDepotAdapter: parser (golden fixtures del HAR) + ingestion a PriceObservation/ScrapeRun + tarea Celery",
+    "capas": ["backend"],
+    "spec": "specs/F025-adapter-homedepot.md",
+    "status": "pending"
+  },
+  {
+    "id": "F026",
+    "titulo": "M2 ConstruramaAdapter (Algolia, respetuoso): parser + ingestion + Celery (requiere captura de respuesta Algolia)",
+    "capas": ["backend"],
+    "spec": "specs/F026-adapter-construrama.md",
+    "status": "pending"
   }
 ]
