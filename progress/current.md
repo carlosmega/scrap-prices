@@ -4,20 +4,19 @@
 
 **Feature en curso:** ninguna
 **Plan:** —
-**Estado:** 🎉 **Pipeline de Home Depot funcionando end-to-end CONTRA EL SITIO REAL.**
-`scrape` (corrida real desde el sandbox, con red) ingirió **13 productos reales** de varilla de HD
-Monterrey → 13 `PriceObservation` (source=xhr) + `ScrapeRun` ok. Validado por el líder en vivo.
-`./init.sh` verde (offline). M2 Home Depot completo: F024 infra + F025 adapter + F027 comando +
-F028 tienda 1333 + F029 params de búsqueda.
+**Estado:** 🎉 **Vertical Home Depot completo con datos REALES y visibles en la app.**
+Lazo end-to-end probado en vivo: `scrape` real → 13 `PriceObservation` (source=xhr) → matching manual
+de 8 varillas reales a canónicos → la búsqueda "varilla" muestra precios reales de HD ($20,068 R-42/ton).
+`./init.sh` verde (offline). M2 HD: F024 infra + F025 adapter + F027 cmd + F028 tienda 1333 + F029 params búsqueda.
 
-## Detalle / siguiente paso del dominio
-- Los 13 `RetailerProduct` scrapeados quedan **`unmatched`**: el matching a `CanonicalProduct` es
-  **manual en Admin** (decisión MVP, D1/§11). Hasta matchearlos, la búsqueda de la UI (que es sobre
-  canónicos) sigue mostrando los 3 canónicos del seed. Para ver precios reales comparados:
-  curar el match `RetailerProduct → CanonicalProduct` en `/admin` (o, fase posterior, fuzzy con rapidfuzz).
+## Notas de la curación (estado de la BD local, db.sqlite3, gitignored)
+- Matching manual hecho por script (curación, como en Admin): 8 RetailerProducts de varilla HD → canónicos 1:1.
+  Quedan 5 unmatched (castillo) — no varilla. **Un "bolardo" entró porque su nombre dice "...cimentación varilla"**
+  (se puede desmatchear si se quiere más limpio).
+- **Unidad:** las R-42 reales son **por TONELADA** ($20,068); los 3 canónicos del seed son por pieza. NO comparar
+  esos números entre unidades hasta normalizar (M5). Para HD solo, el dato es correcto con su unidad.
 
-## Pendientes
-- **Matching manual** de los SKUs reales de HD a canónicos (Admin) para que la comparación muestre datos reales.
-- **F026 Construrama:** captura del body de Algolia.
-- **M5:** Celery beat (programar `scrape`), CI, logging, fuzzy matching (auto-match), export CSV.
-- La BD local (`db.sqlite3`, gitignored) ya tiene datos reales de HD de esta corrida.
+## Pendientes (el payoff de comparación real)
+1. **Construrama (F026):** captura del body de Algolia (tu paso) → 2º retailer real.
+2. **Normalización de unidad (M5):** precio por kg/pieza comparable (HD ton vs Construrama kg vs pieza).
+3. **M5 resto:** auto-match rapidfuzz, Celery beat (programar scrape), CI, logging, export.
