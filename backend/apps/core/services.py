@@ -110,11 +110,15 @@ def seed_demo() -> dict[str, int]:
     retailers = {"home-depot": hd, "construrama": cr}
 
     # RetailerLocation: HD tienda (external_id), Construrama distribuidor (subpath).
+    # Clave de lookup estable = (retailer, name), NO el external_id: este último es
+    # el código real de la tienda Monterrey del recon F010 ("1333", physicalStoreId
+    # que HD acepta para precio) y puede cambiar. Keyear por name -> re-sembrar
+    # ACTUALIZA el external_id en sitio en vez de dejar una fila huérfana.
     hd_loc, _ = RetailerLocation.objects.update_or_create(
         retailer=hd,
-        external_id="store-2034",
+        name="Home Depot Valle Oriente",
         defaults={
-            "name": "Home Depot Valle Oriente",
+            "external_id": "1333",
             "subpath": "",
             "address": "Av. Lázaro Cárdenas 1000, Valle Oriente",
             "city": "Monterrey",

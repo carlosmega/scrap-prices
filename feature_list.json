@@ -186,6 +186,6 @@
     "titulo": "Seed: codigo real de tienda HD Monterrey (external_id 1333 del recon) para la corrida real",
     "capas": ["backend"],
     "spec": "specs/F028-seed-store-real-hd.md",
-    "status": "in_progress"
+    "status": "done"
   }
 ]

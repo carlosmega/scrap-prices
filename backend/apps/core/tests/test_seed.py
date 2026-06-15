@@ -54,6 +54,10 @@ def test_seed_crea_el_grafo_de_la_spec():
     hd_loc = RetailerLocation.objects.filter(retailer=hd).first()
     cr_loc = RetailerLocation.objects.filter(retailer=cr).first()
     assert hd_loc.external_id  # tienda HD identificada por external_id
+    # F028: la tienda HD de Monterrey usa el código real del recon F010 (no placeholder).
+    assert hd_loc.external_id == "1333"
+    assert hd_loc.city == "Monterrey"
+    assert hd_loc.state == "NL"
     assert cr_loc.subpath  # distribuidor Construrama identificado por subpath
 
     # Zona "Monterrey Metro" con centroide aprox.
@@ -130,3 +134,9 @@ def test_seed_es_idempotente():
     assert segunda["retailer"] == 2
     assert segunda["zone"] == 1
     assert segunda["category"] == 1
+    # F028: re-sembrar NO deja una location HD huérfana; queda exactamente 1
+    # con el external_id real "1333" (la clave de lookup estable es (retailer, name)).
+    hd = Retailer.objects.get(slug="home-depot")
+    hd_locs = RetailerLocation.objects.filter(retailer=hd)
+    assert hd_locs.count() == 1
+    assert hd_locs.get().external_id == "1333"

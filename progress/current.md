@@ -2,12 +2,15 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F028** — Seed con tienda real de HD Monterrey (external_id 1333)
-**Spec:** `specs/F028-seed-store-real-hd.md`
+**Feature en curso:** ninguna
+**Plan:** —
+**Estado:** M2 Home Depot completo y operable, con la **tienda real de Monterrey (1333)** en el seed (F028).
+Listo para la **corrida real de HD** en el entorno del humano:
+`uv run python manage.py scrape --retailer home-depot --zone monterrey-metro --category varilla --dry-run`.
+`./init.sh` verde.
 
-## Plan F028 (capa backend → implementer-backend)
-Cambiar en `apps/core/services.py::seed_demo` el `external_id` de la RetailerLocation de Home Depot
-en Monterrey de `store-2034` (placeholder) → **`1333`** (real, del recon F010). Idempotente. Ajustar test.
-Objetivo: que `manage.py scrape --retailer home-depot ...` pegue a la tienda correcta en la corrida real.
-
-**Estado:** F028 `in_progress`. (Tras esto, el humano corre el `--dry-run` de HD.)
+## Pendientes
+- **F026 Construrama:** captura del body de Algolia.
+- **M5:** Celery beat (programar scrape), CI, logging, fuzzy matching, export.
+- Si la corrida real de HD revela que el endpoint de búsqueda necesita `stLocId=18503`/`marketId=10`
+  (recon §2.2), ajustar el adapter (follow-up).
