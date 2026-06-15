@@ -1,0 +1,38 @@
+{
+  "metaData": {
+    "price": "1"
+  },
+  "total": 1,
+  "contents": [
+    {
+      "partNumber": "482588",
+      "id": "79197",
+      "name": "VARILLA CORRUGADA RECTA R-42 1'' 12 METROS 1 TONELADA",
+      "buyable": "true",
+      "hasSingleSKU": false,
+      "storeID": "10351",
+      "x_measurements.quantityMeasure": "C62",
+      "x_measurements.weightMeasure": "TN",
+      "x_measurements.nominalQuantity": "1.0",
+      "x_prices.1333.mxn": "20068.0",
+      "x_prices.1333.field1": "X",
+      "price": [
+        {
+          "usage": "Offer",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "I"
+        },
+        {
+          "usage": "Display",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "L"
+        }
+      ],
+      "inventories.M10.quantity": "61.12",
+      "inventories.18503.quantity": "0.0",
+      "inventories.total.quantity": "7937.29"
+    }
+  ]
+}

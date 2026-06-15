@@ -1,0 +1,116 @@
+{
+  "metaData": {
+    "price": "1"
+  },
+  "total": 4,
+  "contents": [
+    {
+      "partNumber": "462843",
+      "id": "28980",
+      "name": "ALAMBRE DE ACERO RECOCIDO CAL. 16 DE 1.59 MM Ó 0.062 PULGADAS VENTA POR KILO",
+      "buyable": "true",
+      "hasSingleSKU": false,
+      "storeID": "10351",
+      "x_measurements.quantityMeasure": "C62",
+      "x_measurements.weightMeasure": "KG",
+      "x_measurements.nominalQuantity": "1.0",
+      "x_prices.1333.mxn": "27.7",
+      "x_prices.1333.field1": "X",
+      "price": [
+        {
+          "usage": "Offer",
+          "value": "27.7",
+          "currency": "MXN",
+          "description": "I"
+        },
+        {
+          "usage": "Display",
+          "value": "27.7",
+          "currency": "MXN",
+          "description": "L"
+        }
+      ]
+    },
+    {
+      "partNumber": "179194",
+      "id": "80865",
+      "name": "VARILLA CORRUGADA RECTA R-42 5/8'' 12 METROS 1 TONELADA",
+      "buyable": "true",
+      "hasSingleSKU": false,
+      "storeID": "10351",
+      "x_measurements.quantityMeasure": "C62",
+      "x_measurements.weightMeasure": "TN",
+      "x_measurements.nominalQuantity": "1.0",
+      "x_prices.1333.mxn": "20068.0",
+      "x_prices.1333.field1": "X",
+      "price": [
+        {
+          "usage": "Offer",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "I"
+        },
+        {
+          "usage": "Display",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "L"
+        }
+      ]
+    },
+    {
+      "partNumber": "749917",
+      "id": "19738",
+      "name": "ALAMBRÓN DE ACERO 1/4 Ó 6.35 MM, 0.25O VENTA POR KILO",
+      "buyable": "true",
+      "hasSingleSKU": false,
+      "storeID": "10351",
+      "x_measurements.quantityMeasure": "C62",
+      "x_measurements.weightMeasure": "EA",
+      "x_measurements.nominalQuantity": "1.0",
+      "x_prices.1333.mxn": "23.5",
+      "x_prices.1333.field1": "X",
+      "price": [
+        {
+          "usage": "Offer",
+          "value": "23.5",
+          "currency": "MXN",
+          "description": "I"
+        },
+        {
+          "usage": "Display",
+          "value": "23.5",
+          "currency": "MXN",
+          "description": "L"
+        }
+      ]
+    },
+    {
+      "partNumber": "480919",
+      "id": "79263",
+      "name": "VARILLA CORRUGADA RECTA R-42 3/4'' 12 METROS 1 TONELADA",
+      "buyable": "true",
+      "hasSingleSKU": false,
+      "storeID": "10351",
+      "x_measurements.quantityMeasure": "C62",
+      "x_measurements.weightMeasure": "TN",
+      "x_measurements.nominalQuantity": "1.0",
+      "x_prices.1333.mxn": "20068.0",
+      "x_prices.1333.field1": "X",
+      "price": [
+        {
+          "usage": "Offer",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "I"
+        },
+        {
+          "usage": "Display",
+          "value": "20068.0",
+          "currency": "MXN",
+          "description": "L"
+        }
+      ]
+    }
+  ]
+}

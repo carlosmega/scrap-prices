@@ -2,17 +2,17 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** **F025** — HomeDepotAdapter + ingestión (M2)
-**Spec:** `specs/F025-adapter-homedepot.md`
+**Feature en curso:** ninguna
+**Plan:** —
+**Estado:** **M2 — Home Depot completo** (F024 infra + F025 adapter/ingestión/Celery). Scraper
+respetuoso (UA honesto, rate-limit, stop-if-blocked), parser probado offline con golden fixtures
+del HAR; ingestión a `PriceObservation` + `ScrapeRun`. `./init.sh` verde (110 tests backend).
 
-## Plan F025 (capa backend → implementer-backend)
-- `HomeDepotAdapter(BaseRetailerAdapter)` (usa PoliteClient de F024); parser puro
-  `parse_homedepot` (precio Decimal de `price[]`/`x_prices`, sku, disponibilidad, unidad).
-- **Golden fixture** extraído del HAR real (sanitizado) en apps/scraping/tests/fixtures/.
-- Ingestión: ScrapeRun + get_or_create RetailerProduct (matching manual) + PriceObservation (source=xhr).
-- Tarea Celery `scrape_retailer_zone` testeada con ALWAYS_EAGER + httpx MockTransport (sin red real).
-- Respetuoso: stop-if-blocked (un test simula 429 → ScrapeRun failed, sin evasión).
-
-La corrida REAL contra HD va en el entorno del humano (delay ≥7s); aquí todo offline.
-
-**Estado:** F025 `in_progress`. M2: F024 ✅ → **F025** (HD) → F026 (Construrama, tras captura Algolia).
+## Pendiente
+- **F026 ConstruramaAdapter (Algolia): BLOQUEADA** por hueco técnico — el HAR no guardó el body
+  de la respuesta de Algolia (`njvy3eu5dw-dsn.algolia.net`), así que falta la forma real de `hits[]`
+  para escribir/probar el parser. Necesita: 2ª captura que guarde esa respuesta, o un ejemplo de la
+  1ª corrida en vivo en el entorno del humano.
+- **Corrida real HD:** se ejecuta en el entorno del humano (red), con delay ≥7s; el arnés solo
+  construye/prueba offline. (Comando de ingestión vía shell/management.)
+- Otras pendientes: F012 (script recon, opcional), M5 (Celery beat, CI, logging, fuzzy matching).

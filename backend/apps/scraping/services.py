@@ -1,17 +1,30 @@
-"""Lógica de orquestación de corridas de scraping (F024). Sin HTTP, sin routers.
+"""Lógica de orquestación de corridas de scraping (F024/F025). Sin HTTP, sin routers.
 
 Helpers para abrir/cerrar una corrida (`ScrapeRun`) reutilizando el modelo de
 F008 (`apps.prices.models.ScrapeRun`) — NO se crea un modelo nuevo. La política
 de cortesía/reintentos/stop-if-blocked vive en `apps.scraping.client`; aquí solo
 se registra la auditoría de la corrida (D2 del PRD).
+
+`ingest_homedepot` (F025) orquesta una corrida real: abre el `ScrapeRun`, obtiene
+los precios vía el `HomeDepotAdapter`, hace `get_or_create` de `RetailerProduct`
+(matching a canónico queda **unmatched/manual** en Admin) e inserta una
+`PriceObservation` por SKU en la zona. Ante un bloqueo (403/429/challenge) el
+adapter lanza `RetailerBlockedError`: NO se reintenta para evadir; la corrida
+cierra `failed`/`partial` y se propaga el bloqueo.
 """
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from django.utils import timezone
 
-from apps.geo.models import Retailer, Zone
-from apps.prices.models import ScrapeRun
+from apps.catalog.models import RetailerProduct
+from apps.geo.models import Retailer, RetailerLocation, Zone
+from apps.prices.models import PriceObservation, ScrapeRun
+from apps.scraping.exceptions import RetailerBlockedError, ScrapeError
+from apps.scraping.homedepot import HOMEDEPOT_BASE_URL, HomeDepotAdapter
+from apps.scraping.parsers import homedepot_unit
 
 
 def abrir_corrida(retailer: Retailer, zone: Zone | None = None) -> ScrapeRun:
@@ -56,3 +69,93 @@ def cerrar_corrida(
     run.errors = errors
     run.save(update_fields=["finished_at", "status", "items_found", "errors", "updated_at"])
     return run
+
+
+# --- Ingestión Home Depot (F025) -------------------------------------------
+
+
+def _get_or_create_retailer_product(
+    retailer: Retailer, raw_price
+) -> RetailerProduct:
+    """`get_or_create` de `RetailerProduct` por (retailer, external_sku).
+
+    El matching al `CanonicalProduct` NO se hace aquí: queda `unmatched` (default
+    del modelo) para curarse a mano en Admin (PRD D1). Idempotente: dos corridas
+    sobre el mismo SKU no duplican la fila (clave única retailer+external_sku).
+    """
+    rp, _created = RetailerProduct.objects.get_or_create(
+        retailer=retailer,
+        external_sku=raw_price.sku,
+        defaults={
+            "raw_name": raw_price.raw_name,
+            "url": f"{HOMEDEPOT_BASE_URL}/p/{raw_price.sku}",
+            "unit_raw": homedepot_unit(raw_price.raw_payload),
+        },
+    )
+    return rp
+
+
+def ingest_homedepot(
+    zone: Zone,
+    location: RetailerLocation,
+    category: str,
+    *,
+    adapter: HomeDepotAdapter | None = None,
+    captured_at: datetime | None = None,
+) -> ScrapeRun:
+    """Corrida de scraping de Home Depot: precios → `PriceObservation` (F025).
+
+    Flujo:
+    1. Abre un `ScrapeRun` (queda `failed` hasta cerrarse: default seguro).
+    2. Posiciona el adapter en la tienda (`set_zone`) y obtiene los `RawPrice`
+       de la categoría en una sola llamada de búsqueda (cortesía: menos requests).
+    3. Por cada SKU: `get_or_create` de `RetailerProduct` (matching manual) e
+       inserta una `PriceObservation` (source=xhr, captured_at, raw_payload) en la
+       zona/ubicación.
+    4. Cierra el `ScrapeRun` (ok/partial/failed, items_found, errors).
+
+    Guardrail §2.3: si HD bloquea (403/429/challenge), el adapter propaga
+    `RetailerBlockedError`; aquí NO se reintenta para evadir: se registra el
+    bloqueo, se cierra la corrida `failed`/`partial` y se relanza la excepción.
+    """
+    retailer = location.retailer
+    adapter = adapter or HomeDepotAdapter()
+    captured_at = captured_at or timezone.now()
+
+    run = abrir_corrida(retailer, zone)
+    errors: list[dict] = []
+    items_found = 0
+
+    try:
+        precios = adapter.fetch_products_with_prices(
+            category, location, captured_at=captured_at
+        )
+    except RetailerBlockedError as exc:
+        # stop-if-blocked: NO se reintenta ni se evade. Se audita y se relanza.
+        errors.append({"type": "blocked", "detail": str(exc), "status": exc.status_code})
+        cerrar_corrida(run, items_found=0, errors=errors)
+        raise
+    except ScrapeError as exc:
+        errors.append({"type": "scrape_error", "detail": str(exc)})
+        cerrar_corrida(run, items_found=0, errors=errors)
+        raise
+
+    for precio in precios:
+        try:
+            rp = _get_or_create_retailer_product(retailer, precio)
+            PriceObservation.objects.create(
+                retailer_product=rp,
+                zone=zone,
+                retailer_location=location,
+                price=precio.price,
+                currency=precio.currency,
+                is_available=precio.is_available,
+                source=PriceObservation.Source.XHR,
+                captured_at=precio.captured_at,
+                raw_payload=precio.raw_payload,
+            )
+            items_found += 1
+        except Exception as exc:  # noqa: BLE001 — un SKU malo no tumba la corrida
+            errors.append({"sku": precio.sku, "error": str(exc)})
+
+    return cerrar_corrida(run, items_found=items_found, errors=errors)
