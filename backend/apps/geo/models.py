@@ -58,6 +58,9 @@ class RetailerLocation(TimeStampedUUIDModel):
     state = models.CharField(max_length=120)
     lat = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
     lng = models.DecimalField(max_digits=9, decimal_places=6, null=True, blank=True)
+    # Params de routing específicos del retailer que no caben en los campos base
+    # (HD: market_id/st_loc_id; Construrama: distribuidor/ciudad, F026). Genérico.
+    extra = models.JSONField(default=dict, blank=True)
 
     class Meta:
         ordering = ["retailer", "name"]

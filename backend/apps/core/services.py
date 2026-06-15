@@ -125,6 +125,11 @@ def seed_demo() -> dict[str, int]:
             "state": "NL",
             "lat": Decimal("25.648900"),
             "lng": Decimal("-100.310600"),
+            # Params de routing reales de HCL Commerce para esta tienda (recon
+            # F010 §3): marketId 10 y stLocId 18503 (id interno, distinto del
+            # external_id/physicalStoreId 1333). Necesarios para que la búsqueda
+            # devuelva resultados con precio (F029).
+            "extra": {"market_id": "10", "st_loc_id": "18503"},
         },
     )
     cr_loc, _ = RetailerLocation.objects.update_or_create(

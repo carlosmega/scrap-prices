@@ -193,6 +193,6 @@
     "titulo": "HomeDepotAdapter busqueda real: profileName + marketId/stLocId (RetailerLocation.extra) - descubierto en dry-run en vivo",
     "capas": ["backend"],
     "spec": "specs/F029-hd-busqueda-params.md",
-    "status": "in_progress"
+    "status": "done"
   }
 ]

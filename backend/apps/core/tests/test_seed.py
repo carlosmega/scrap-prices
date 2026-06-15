@@ -58,6 +58,8 @@ def test_seed_crea_el_grafo_de_la_spec():
     assert hd_loc.external_id == "1333"
     assert hd_loc.city == "Monterrey"
     assert hd_loc.state == "NL"
+    # F029: params reales de routing HCL (marketId/stLocId) en extra.
+    assert hd_loc.extra == {"market_id": "10", "st_loc_id": "18503"}
     assert cr_loc.subpath  # distribuidor Construrama identificado por subpath
 
     # Zona "Monterrey Metro" con centroide aprox.
@@ -140,3 +142,5 @@ def test_seed_es_idempotente():
     hd_locs = RetailerLocation.objects.filter(retailer=hd)
     assert hd_locs.count() == 1
     assert hd_locs.get().external_id == "1333"
+    # F029: el extra de routing se conserva idéntico tras re-sembrar (idempotente).
+    assert hd_locs.get().extra == {"market_id": "10", "st_loc_id": "18503"}

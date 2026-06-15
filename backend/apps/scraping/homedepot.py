@@ -11,7 +11,8 @@ El adapter NO contiene ninguna técnica de evasión: la cortesía (rate-limit, U
 honesto) y el `stop-if-blocked` viven en el `PoliteClient` (F024) que usa por
 composición. El parseo del cuerpo vive en `apps.scraping.parsers.parse_homedepot`
 (función pura, testeada con golden fixtures). `set_zone(location)` fija el
-`physicalStoreId` desde `RetailerLocation.external_id`.
+`physicalStoreId` desde `RetailerLocation.external_id` y, para la búsqueda con
+precio, `marketId`/`stLocId` desde `RetailerLocation.extra` (F029).
 
 Sin red en tests: el `PoliteClient` recibe un `httpx.MockTransport`.
 """
@@ -54,14 +55,21 @@ class HomeDepotAdapter(BaseRetailerAdapter):
         # defaults honestos de settings (UA, delay, reintentos).
         self._client = client or build_polite_client()
         self._physical_store_id: str | None = None
+        self._market_id: str | None = None
+        self._st_loc_id: str | None = None
 
     # -- zona ----------------------------------------------------------------
     def set_zone(self, location: RetailerLocation | Zone) -> None:
-        """Fija el `physicalStoreId` de la tienda desde `RetailerLocation`.
+        """Fija los params de tienda desde `RetailerLocation`.
 
         En HD la zona es una tienda física; su código (`external_id`, p.ej.
         `1333` para Monterrey) viaja como `physicalStoreId` en cada llamada de
         precio (recon §1/§3). `Zone` no porta tienda: se exige `RetailerLocation`.
+
+        La búsqueda con precio (F029) necesita además `marketId` y `stLocId`
+        (id interno, distinto del `external_id`/`physicalStoreId`). Esos params
+        viven en `location.extra` (`market_id`/`st_loc_id`, sembrados por F029);
+        si faltan, se omiten y la URL cae al comportamiento sin ellos.
         """
         if not isinstance(location, RetailerLocation):
             raise TypeError(
@@ -69,6 +77,11 @@ class HomeDepotAdapter(BaseRetailerAdapter):
                 "(la tienda física); una Zone no fija el physicalStoreId."
             )
         self._physical_store_id = str(location.external_id)
+        extra = location.extra or {}
+        market_id = extra.get("market_id")
+        st_loc_id = extra.get("st_loc_id")
+        self._market_id = str(market_id) if market_id else None
+        self._st_loc_id = str(st_loc_id) if st_loc_id else None
 
     # -- construcción de URL -------------------------------------------------
     def _build_products_url(self, part_numbers: list[str]) -> str:
@@ -91,7 +104,14 @@ class HomeDepotAdapter(BaseRetailerAdapter):
         return f"{HOMEDEPOT_BASE_URL}{PRODUCTS_PATH}?{urlencode(params)}"
 
     def _build_search_url(self, search_term: str, *, limit: int, offset: int) -> str:
-        """Arma la URL de búsqueda/listado por término (recon §2.2)."""
+        """Arma la URL de búsqueda/listado por término (recon §2.2).
+
+        Incluye el `profileName` con precio (`HCL_V2_findProductsBySearchTermWithPrice`)
+        y, si la tienda los aporta vía `location.extra`, `marketId`/`stLocId`. Sin
+        esos params la búsqueda HCL devuelve `total:0` (descubierto en la corrida
+        real F027); por eso F029 los siembra en `RetailerLocation.extra`. Si faltan,
+        se omiten en vez de reventar (fallback razonable).
+        """
         params: list[tuple[str, str]] = [
             ("storeId", STORE_ID),
             ("searchTerm", search_term),
@@ -102,9 +122,14 @@ class HomeDepotAdapter(BaseRetailerAdapter):
             ("currency", CURRENCY),
             ("langId", LANG_ID),
         ]
+        if self._market_id:
+            params.append(("marketId", self._market_id))
         if self._physical_store_id:
             params.append(("physicalStoreId", self._physical_store_id))
-            params.append(("stLocId", self._physical_store_id))
+        # stLocId es el id interno de tienda (distinto del physicalStoreId), viene
+        # de extra. Si no se sembró, se omite (fallback) en vez de reventar.
+        if self._st_loc_id:
+            params.append(("stLocId", self._st_loc_id))
         return f"{HOMEDEPOT_BASE_URL}{PRODUCTS_PATH}?{urlencode(params)}"
 
     # -- interfaz F024 -------------------------------------------------------

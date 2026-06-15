@@ -15,6 +15,7 @@ from __future__ import annotations
 
 from decimal import Decimal
 from pathlib import Path
+from urllib.parse import parse_qs, urlsplit
 
 import httpx
 import pytest
@@ -117,6 +118,76 @@ def test_adapter_envia_physical_store_id_en_la_url(hd_setup):
     assert "physicalStoreId=18503" in url
     assert "searchTerm=varilla" in url
     assert url.startswith("https://www.homedepot.com.mx/search/resources/api/v2/products")
+
+
+# --- (1b) params reales de búsqueda desde extra (F029) ----------------------
+@pytest.mark.django_db
+def test_build_search_url_incluye_profile_market_y_stloc_desde_extra(db):
+    """`_build_search_url` arma profileName + marketId/stLocId desde location.extra.
+
+    Tienda real Monterrey (recon F010): external_id/physicalStoreId=1333,
+    extra={market_id:10, st_loc_id:18503}. Se valida con parse_qs (sin depender
+    del orden de los params).
+    """
+    from apps.geo.models import Retailer, RetailerLocation
+
+    retailer = Retailer.objects.create(
+        name="Home Depot",
+        slug="home-depot",
+        base_url="https://www.homedepot.com.mx",
+        pricing_model=Retailer.PricingModel.ZONE_COOKIE,
+    )
+    location = RetailerLocation.objects.create(
+        retailer=retailer,
+        external_id="1333",
+        name="Home Depot Valle Oriente",
+        city="Monterrey",
+        state="NL",
+        extra={"market_id": "10", "st_loc_id": "18503"},
+    )
+
+    adapter = _make_adapter(_ok_handler("homedepot_varilla_batch.json"))
+    adapter.set_zone(location)
+    url = adapter._build_search_url("varilla", limit=28, offset=0)
+
+    qs = parse_qs(urlsplit(url).query)
+    assert qs["profileName"] == ["HCL_V2_findProductsBySearchTermWithPrice"]
+    assert qs["marketId"] == ["10"]
+    assert qs["stLocId"] == ["18503"]
+    assert qs["physicalStoreId"] == ["1333"]
+    assert qs["searchTerm"] == ["varilla"]
+    assert qs["limit"] == ["28"]
+    assert qs["offset"] == ["0"]
+
+
+@pytest.mark.django_db
+def test_build_search_url_sin_extra_omite_market_y_stloc(db):
+    """Fallback: sin extra, la URL no revienta; omite marketId/stLocId."""
+    from apps.geo.models import Retailer, RetailerLocation
+
+    retailer = Retailer.objects.create(
+        name="Home Depot",
+        slug="home-depot",
+        base_url="https://www.homedepot.com.mx",
+        pricing_model=Retailer.PricingModel.ZONE_COOKIE,
+    )
+    location = RetailerLocation.objects.create(
+        retailer=retailer,
+        external_id="1333",
+        name="HD sin extra",
+        city="Monterrey",
+        state="NL",
+    )
+
+    adapter = _make_adapter(_ok_handler("homedepot_varilla_batch.json"))
+    adapter.set_zone(location)
+    url = adapter._build_search_url("varilla", limit=28, offset=0)
+
+    qs = parse_qs(urlsplit(url).query)
+    assert qs["profileName"] == ["HCL_V2_findProductsBySearchTermWithPrice"]
+    assert qs["physicalStoreId"] == ["1333"]
+    assert "marketId" not in qs
+    assert "stLocId" not in qs
 
 
 # --- (2) ingestión crea PriceObservation + ScrapeRun ok ---------------------
