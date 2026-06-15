@@ -2,21 +2,19 @@
 
 > El líder mantiene este archivo. Se limpia al cerrar cada feature.
 
-**Feature en curso:** ninguna
-**Plan:** —
-**Estado:** 🎉 **Vertical Home Depot completo con datos REALES y visibles en la app.**
-Lazo end-to-end probado en vivo: `scrape` real → 13 `PriceObservation` (source=xhr) → matching manual
-de 8 varillas reales a canónicos → la búsqueda "varilla" muestra precios reales de HD ($20,068 R-42/ton).
-`./init.sh` verde (offline). M2 HD: F024 infra + F025 adapter + F027 cmd + F028 tienda 1333 + F029 params búsqueda.
+**Feature en curso:** **F030** — Fix hydration mismatch (hooks localStorage SSR-safe)
+**Spec:** `specs/F030-fix-hydration.md`
 
-## Notas de la curación (estado de la BD local, db.sqlite3, gitignored)
-- Matching manual hecho por script (curación, como en Admin): 8 RetailerProducts de varilla HD → canónicos 1:1.
-  Quedan 5 unmatched (castillo) — no varilla. **Un "bolardo" entró porque su nombre dice "...cimentación varilla"**
-  (se puede desmatchear si se quiere más limpio).
-- **Unidad:** las R-42 reales son **por TONELADA** ($20,068); los 3 canónicos del seed son por pieza. NO comparar
-  esos números entre unidades hasta normalizar (M5). Para HD solo, el dato es correcto con su unidad.
+## Bug reportado por el humano (navegador)
+"Hydration failed... server rendered text didn't match the client" en SearchPanel/CardDescription.
+Causa: `useSelectedZone` (y cotización/sesión) leen localStorage en el render inicial → SSR (sin zona)
+≠ cliente (con zona guardada). Build/tests offline no lo detectaron (es runtime SSR/cliente).
 
-## Pendientes (el payoff de comparación real)
-1. **Construrama (F026):** captura del body de Algolia (tu paso) → 2º retailer real.
-2. **Normalización de unidad (M5):** precio por kg/pieza comparable (HD ton vs Construrama kg vs pieza).
-3. **M5 resto:** auto-match rapidfuzz, Celery beat (programar scrape), CI, logging, export.
+## Plan F030 (frontend + e2e → implementer-frontend)
+- Hooks SSR-safe: valor inicial = default sin localStorage; leer localStorage en useEffect/useSyncExternalStore
+  tras montar. Conservar persistencia + sync. Aplicar a useSelectedZone (F019) y useQuote/getSessionKey (F022).
+- Guardia E2E: fallar si hay error de hidratación al cargar `/` con zona pre-seteada en localStorage.
+
+Tras review, el líder reinicia el dev server y confirma 200 sin mismatch.
+
+**Estado:** F030 `in_progress`. (Datos reales de HD ya visibles en la app; este fix es de calidad de UI.)

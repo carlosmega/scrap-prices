@@ -194,5 +194,12 @@
     "capas": ["backend"],
     "spec": "specs/F029-hd-busqueda-params.md",
     "status": "done"
+  },
+  {
+    "id": "F030",
+    "titulo": "Fix hydration mismatch: hooks de localStorage (zona/cotizacion) SSR-safe + guardia E2E",
+    "capas": ["frontend", "e2e"],
+    "spec": "specs/F030-fix-hydration.md",
+    "status": "in_progress"
   }
 ]
