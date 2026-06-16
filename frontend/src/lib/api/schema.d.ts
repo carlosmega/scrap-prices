@@ -285,6 +285,10 @@ export interface components {
         /**
          * CanonicalProductRefOut
          * @description Subconjunto público del producto canónico para el resultado de búsqueda.
+         *
+         *     F031: `mass_kg` (peso de una pieza canónica) es el factor de conversión que
+         *     permite a la UI explicar la normalización; None si el canónico no es
+         *     normalizable. String Decimal por exactitud.
          */
         CanonicalProductRefOut: {
             /** Id */
@@ -295,6 +299,8 @@ export interface components {
             category: string;
             /** Unit */
             unit: string;
+            /** Mass Kg */
+            mass_kg?: string | null;
         };
         /**
          * PriceByRetailerOut
@@ -303,6 +309,13 @@ export interface components {
          *     `price`/`captured_at` son None cuando el retailer no tiene observación en la
          *     zona (entonces `is_available=False`). `price` se serializa como string del
          *     Decimal para no perder exactitud monetaria (PRD §8).
+         *
+         *     F031: `price` es el valor NATIVO del retailer (transparencia: "listado a
+         *     $X/ton"); `sale_unit` es su unidad estructurada (`""` = desconocida). La
+         *     comparación cross-retailer usa los campos NORMALIZADOS `price_per_piece`
+         *     (titular de obra) y `price_per_kg` (base de orden/menor-precio). Cualquiera
+         *     de los dos es None cuando no se puede normalizar (falta `mass_kg`, unidad
+         *     desconocida o sin precio en la zona). También como string Decimal.
          */
         PriceByRetailerOut: {
             retailer: components["schemas"]["RetailerRefOut"];
@@ -324,6 +337,15 @@ export interface components {
             captured_at?: string | null;
             /** Url */
             url: string;
+            /**
+             * Sale Unit
+             * @default
+             */
+            sale_unit: string;
+            /** Price Per Piece */
+            price_per_piece?: string | null;
+            /** Price Per Kg */
+            price_per_kg?: string | null;
         };
         /**
          * RetailerRefOut
@@ -347,6 +369,9 @@ export interface components {
         /**
          * CanonicalProductDetailOut
          * @description Producto canónico expandido para el detalle (incluye `specs` libres).
+         *
+         *     F031: incluye `mass_kg` (factor de conversión para la normalización; None si
+         *     no es normalizable). String Decimal por exactitud.
          */
         CanonicalProductDetailOut: {
             /** Id */
@@ -357,6 +382,8 @@ export interface components {
             category: string;
             /** Unit */
             unit: string;
+            /** Mass Kg */
+            mass_kg?: string | null;
             /** Specs */
             specs: {
                 [key: string]: unknown;
@@ -369,6 +396,10 @@ export interface components {
          *     `price` se serializa como string del Decimal por exactitud monetaria
          *     (PRD §8). El historial combina todos los retailers en la zona, ordenado por
          *     `-captured_at` (la UI de F021 puede agrupar por retailer).
+         *
+         *     F031: cada punto gana `sale_unit` para ETIQUETAR su unidad nativa (`""` =
+         *     desconocida). El historial NO se normaliza (fuera de alcance): `price` sigue
+         *     siendo el valor nativo.
          */
         PriceHistoryPointOut: {
             retailer: components["schemas"]["RetailerRefOut"];
@@ -386,6 +417,11 @@ export interface components {
              * Format: date-time
              */
             captured_at: string;
+            /**
+             * Sale Unit
+             * @default
+             */
+            sale_unit: string;
         };
         /**
          * ProductDetailOut

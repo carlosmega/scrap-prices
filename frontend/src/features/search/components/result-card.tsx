@@ -4,11 +4,18 @@
  *
  * No es Client Component: es presentación pura sobre datos ya cargados, así que
  * vive sin `"use client"` (el estado/interactividad están en `SearchPanel`).
- * Las filas se ordenan con el menor precio primero (B1·CA4) y un retailer sin
+ *
+ * F031 — Normalización de unidad: cada retailer lista en su propia unidad
+ * (HD por tonelada, CR por kg). El titular muestra el NORMALIZADO por pieza
+ * ("$236.65 / pieza"), el secundario el NATIVO ("listado a $20,085.00 / ton") y
+ * el $/kg (base de comparación). Las filas se ordenan por $/kg ascendente y la
+ * de menor $/kg se marca como "mejor precio" (B1·CA4). Cuando un retailer no es
+ * normalizable se cae al nativo con nota "sin normalizar"; un retailer sin
  * precio en la zona se indica explícitamente (B1·CA5).
  */
 import Link from "next/link";
 
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -18,7 +25,14 @@ import {
 
 import { AddToQuoteButton } from "@/features/lists/components/add-to-quote-button";
 
-import { formatPrice, sortPricesAsc } from "../format";
+import {
+  bestPriceIndex,
+  formatNativePrice,
+  formatPrice,
+  formatPricePerKg,
+  formatPricePerPiece,
+  sortPricesAsc,
+} from "../format";
 import { freshnessLabel } from "../relative-time";
 import type { SearchResult } from "../types";
 
@@ -32,6 +46,7 @@ export function ResultCard({
 }) {
   const { canonical_product: product, prices } = result;
   const orderedPrices = sortPricesAsc(prices);
+  const bestIndex = bestPriceIndex(orderedPrices);
 
   return (
     <Card className="w-full" data-testid="search-result">
@@ -51,9 +66,23 @@ export function ResultCard({
       </CardHeader>
       <CardContent>
         <ul className="flex flex-col divide-y divide-foreground/10">
-          {orderedPrices.map((entry) => {
+          {orderedPrices.map((entry, index) => {
             const hasPrice =
               entry.price !== null && entry.price !== undefined;
+            const isBest = index === bestIndex;
+            const headline = formatPricePerPiece(
+              entry.price_per_piece,
+              entry.currency,
+            );
+            const perKg = formatPricePerKg(entry.price_per_kg, entry.currency);
+            const native = formatNativePrice(
+              entry.price,
+              entry.sale_unit,
+              entry.currency,
+            );
+            // "Sin normalizar": hay precio nativo pero no se pudo normalizar.
+            const isUnnormalized = hasPrice && headline === null && perKg === null;
+
             return (
               <li
                 key={entry.retailer.slug}
@@ -62,8 +91,11 @@ export function ResultCard({
                 data-retailer={entry.retailer.slug}
               >
                 <div className="flex flex-col">
-                  <span className="font-medium text-foreground">
+                  <span className="flex items-center gap-2 font-medium text-foreground">
                     {entry.retailer.name}
+                    {isBest ? (
+                      <Badge data-testid="best-price-badge">mejor precio</Badge>
+                    ) : null}
                   </span>
                   {hasPrice ? (
                     <span
@@ -78,12 +110,39 @@ export function ResultCard({
 
                 {hasPrice ? (
                   <div className="flex items-center gap-3">
-                    <span
-                      className="text-base font-semibold tabular-nums text-foreground"
-                      data-testid="retailer-price"
-                    >
-                      {formatPrice(entry.price as string, entry.currency)}
-                    </span>
+                    <div className="flex flex-col items-end">
+                      <span
+                        className="text-base font-semibold tabular-nums text-foreground"
+                        data-testid="retailer-price"
+                      >
+                        {headline ??
+                          formatPrice(entry.price as string, entry.currency)}
+                      </span>
+                      {native ? (
+                        <span
+                          className="text-xs text-muted-foreground tabular-nums"
+                          data-testid="retailer-native-price"
+                        >
+                          {native}
+                        </span>
+                      ) : null}
+                      {perKg ? (
+                        <span
+                          className="text-xs text-muted-foreground tabular-nums"
+                          data-testid="retailer-price-per-kg"
+                        >
+                          {perKg}
+                        </span>
+                      ) : null}
+                      {isUnnormalized ? (
+                        <span
+                          className="text-xs text-muted-foreground"
+                          data-testid="retailer-unnormalized"
+                        >
+                          sin normalizar
+                        </span>
+                      ) : null}
+                    </div>
                     <AddToQuoteButton
                       retailerProductId={entry.retailer_product_id}
                       zoneId={zoneId}

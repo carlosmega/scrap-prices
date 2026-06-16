@@ -47,13 +47,22 @@ def test_busqueda_varilla_en_mty_con_ambos_retailers(client, seeded):
 
     item = data[0]
     assert set(item.keys()) == {"canonical_product", "prices"}
-    assert set(item["canonical_product"].keys()) == {"id", "name", "category", "unit"}
+    # F031: el canónico expone mass_kg (factor de normalización).
+    assert set(item["canonical_product"].keys()) == {
+        "id",
+        "name",
+        "category",
+        "unit",
+        "mass_kg",
+    }
     assert item["canonical_product"]["category"] == "Varilla"
+    assert item["canonical_product"]["mass_kg"] is not None
 
     slugs = {p["retailer"]["slug"] for p in item["prices"]}
     assert slugs == {"home-depot", "construrama"}
 
     for precio in item["prices"]:
+        # F031: cada precio trae unidad nativa + normalizados $/pieza y $/kg.
         assert set(precio.keys()) == {
             "retailer",
             "retailer_product_id",
@@ -62,21 +71,29 @@ def test_busqueda_varilla_en_mty_con_ambos_retailers(client, seeded):
             "is_available",
             "captured_at",
             "url",
+            "sale_unit",
+            "price_per_piece",
+            "price_per_kg",
         }
-        # Ambos retailers tienen precio y frescura (última observación).
+        # Ambos retailers tienen precio NATIVO y frescura (última observación).
         assert precio["price"] is not None
         assert precio["is_available"] is True
         assert precio["captured_at"] is not None
         assert precio["currency"] == "MXN"
         assert precio["url"]
+        # El seed siembra unidad por retailer (HD tonelada, CR kg) → normalizables.
+        assert precio["sale_unit"] in {"tonelada", "kg"}
+        assert precio["price_per_piece"] is not None
+        assert precio["price_per_kg"] is not None
 
 
 @pytest.mark.django_db
 def test_usa_la_ultima_observacion_por_retailer_y_zona(client, seeded):
-    """El precio devuelto es el de la observación MÁS reciente (captured_at)."""
+    """El precio devuelto es el NATIVO de la observación MÁS reciente (captured_at)."""
     zona = seeded["zona"]
-    # Para el canónico de 3/8 (#3), el seed pone HD base 189.50 + delta 9.00 en la
-    # última captura (2026-06-13) → 198.50, y CR 182.00 + 9.00 → 191.00.
+    # F031: para el canónico de 3/8 (#3), el seed pone HD base 19500.00/ton y CR
+    # 20.90/kg; la última captura (2026-06-13) aplica ×1.030 → HD 20085.00/ton,
+    # CR 21.53/kg (precios NATIVOS en cada unidad).
     canonico = CanonicalProduct.objects.get(name__startswith="Varilla corrugada 3/8")
     response = client.get(f"/search?q=3/8&zone_id={zona.id}")
 
@@ -84,31 +101,59 @@ def test_usa_la_ultima_observacion_por_retailer_y_zona(client, seeded):
     data = response.json()
     item = next(i for i in data if i["canonical_product"]["id"] == str(canonico.id))
     por_slug = {p["retailer"]["slug"]: p for p in item["prices"]}
-    assert por_slug["home-depot"]["price"] == "198.50"
-    assert por_slug["construrama"]["price"] == "191.00"
+    assert por_slug["home-depot"]["price"] == "20085.00"
+    assert por_slug["home-depot"]["sale_unit"] == "tonelada"
+    assert por_slug["construrama"]["price"] == "21.53"
+    assert por_slug["construrama"]["sale_unit"] == "kg"
     assert por_slug["home-depot"]["captured_at"].startswith("2026-06-13")
+    # Normalizado: HD 20085/ton → 20.09/kg; CR 21.53/kg directo.
+    assert por_slug["home-depot"]["price_per_kg"] == "20.09"
+    assert por_slug["construrama"]["price_per_kg"] == "21.53"
 
 
 @pytest.mark.django_db
 def test_orden_por_precio_menor_primero(client, seeded):
-    """sort=price ordena por el menor precio disponible entre retailers."""
+    """sort=price ordena por el menor $/kg disponible entre retailers (F031)."""
     zona = seeded["zona"]
     response = client.get(f"/search?q=varilla&zone_id={zona.id}&sort=price")
 
     assert response.status_code == 200
     data = response.json()
 
-    def menor(item):
+    def menor_por_kg(item):
         return min(
-            Decimal(p["price"])
+            Decimal(p["price_per_kg"])
             for p in item["prices"]
-            if p["price"] is not None and p["is_available"]
+            if p["price_per_kg"] is not None and p["is_available"]
         )
 
-    menores = [menor(i) for i in data]
+    menores = [menor_por_kg(i) for i in data]
     assert menores == sorted(menores)
-    # La varilla más barata (1/4 6m) va primero.
-    assert "1/4" in data[0]["canonical_product"]["name"]
+
+
+@pytest.mark.django_db
+def test_para_varilla_4_home_depot_es_menor_por_kg_aunque_nativo_mayor(client, seeded):
+    """Criterio clave F031: para la #4, HD (nativo por tonelada) tiene el menor
+    $/kg aunque su `price` nativo sea MUCHO mayor que el de Construrama."""
+    zona = seeded["zona"]
+    canonico = CanonicalProduct.objects.get(name__startswith="Varilla corrugada 1/2")
+    response = client.get(f"/search?q=1/2&zone_id={zona.id}")
+
+    assert response.status_code == 200
+    item = next(
+        i for i in response.json() if i["canonical_product"]["id"] == str(canonico.id)
+    )
+    por_slug = {p["retailer"]["slug"]: p for p in item["prices"]}
+
+    hd, cr = por_slug["home-depot"], por_slug["construrama"]
+    # El número NATIVO de HD es mayor (tonelada vs kg): 20085.00 >> 21.53.
+    assert Decimal(hd["price"]) > Decimal(cr["price"])
+    assert hd["sale_unit"] == "tonelada"
+    assert cr["sale_unit"] == "kg"
+    # Pero normalizado a $/kg, HD es MÁS BARATO: 20.09 < 21.53.
+    assert Decimal(hd["price_per_kg"]) < Decimal(cr["price_per_kg"])
+    assert hd["price_per_kg"] == "20.09"
+    assert cr["price_per_kg"] == "21.53"
 
 
 @pytest.mark.django_db

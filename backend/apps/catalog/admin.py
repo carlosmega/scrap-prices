@@ -22,8 +22,11 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(CanonicalProduct)
 class CanonicalProductAdmin(admin.ModelAdmin):
-    list_display = ("name", "category", "unit", "is_active")
+    # F031: mass_kg visible y editable en el listado para curar el factor de
+    # conversión (peso de la pieza canónica) que habilita la normalización.
+    list_display = ("name", "category", "unit", "mass_kg", "is_active")
     list_filter = ("category", "unit", "is_active")
+    list_editable = ("mass_kg",)
     search_fields = ("name",)
     autocomplete_fields = ("category",)
 
@@ -35,14 +38,16 @@ class RetailerProductAdmin(admin.ModelAdmin):
         "retailer",
         "external_sku",
         "canonical_product",
+        "sale_unit",
         "match_status",
         "match_confidence",
         "is_active",
     )
-    list_filter = ("match_status", "retailer", "is_active")
+    list_filter = ("match_status", "retailer", "sale_unit", "is_active")
     search_fields = ("raw_name", "external_sku", "brand")
-    # FK editable directamente en el listado para curar sin abrir cada fila.
-    list_editable = ("canonical_product",)
+    # FK y sale_unit editables directamente en el listado para curar sin abrir
+    # cada fila (F031: la unidad de venta habilita la normalización).
+    list_editable = ("canonical_product", "sale_unit")
     autocomplete_fields = ("canonical_product",)
     actions = ("asignar_a_canonico_manual",)
 

@@ -181,3 +181,25 @@ def parse_homedepot_prices(
 def homedepot_unit(content: dict) -> str:
     """Unidad de venta cruda (`x_measurements.quantityMeasure`), p.ej. C62/TN."""
     return str(content.get("x_measurements.quantityMeasure") or "")
+
+
+# Mapa código UN/ECE Recommendation 20 → `RetailerProduct.SaleUnit` (F031).
+# C62 = unidad/pieza; TNE/TN = tonelada métrica; KGM = kilogramo; MTR = metro.
+# Lo desconocido cae a "" (no normalizable: se cura en Admin).
+_HOMEDEPOT_UNECE_TO_SALE_UNIT = {
+    "C62": "pieza",
+    "TNE": "tonelada",
+    "TN": "tonelada",
+    "KGM": "kg",
+    "MTR": "m",
+}
+
+
+def homedepot_sale_unit(code: str) -> str:
+    """Mapea el código UN/ECE de `x_measurements.quantityMeasure` a `SaleUnit`.
+
+    C62→pieza, TN/TNE→tonelada, KGM→kg, MTR→m; cualquier otro/desconocido→"".
+    Función pura (sin red/DB): testeable 1:1. El "" deja el SKU sin normalizar
+    para curarlo en Admin (igual que el matching a canónico queda `unmatched`).
+    """
+    return _HOMEDEPOT_UNECE_TO_SALE_UNIT.get(str(code or "").strip().upper(), "")

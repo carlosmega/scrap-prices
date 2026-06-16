@@ -10,7 +10,7 @@ import { expect, test } from "@playwright/test";
  * por precio el menor aparece primero.
  */
 
-/** Convierte "$1,234.50 MXN" / "$59.50" a número para comparaciones. */
+/** Convierte "$1,234.50 MXN" / "$20.09 / kg" a número para comparaciones. */
 function parsePrice(text: string): number {
   const cleaned = text.replace(/[^0-9.]/g, "");
   return Number(cleaned);
@@ -66,13 +66,20 @@ test("buscar varilla en Monterrey Metro: ambos retailers y orden por precio", as
     firstCard.getByTestId("retailer-freshness").first()
   ).toContainText(/actualizado hace/i);
 
-  // Orden por precio: el PRIMER precio mostrado (primer retailer del primer
-  // resultado) es el menor de todos los precios visibles en la página.
-  const priceTexts = await page
-    .getByTestId("retailer-price")
+  // Orden por precio = base de comparación $/kg (F031), NO el titular $/pieza
+  // ni el nativo crudo. Dentro de la primera tarjeta, la PRIMERA fila de
+  // retailer tiene el menor $/kg de la tarjeta y es la marcada "mejor precio".
+  const perKgTexts = await firstCard
+    .getByTestId("retailer-price-per-kg")
     .allTextContents();
-  const prices = priceTexts.map(parsePrice);
-  expect(prices.length).toBeGreaterThanOrEqual(2);
-  const minPrice = Math.min(...prices);
-  expect(prices[0]).toBeCloseTo(minPrice, 2);
+  const perKg = perKgTexts.map(parsePrice);
+  expect(perKg.length).toBeGreaterThanOrEqual(2);
+  const minPerKg = Math.min(...perKg);
+  expect(perKg[0]).toBeCloseTo(minPerKg, 2);
+
+  // El badge "mejor precio" está en la primera fila (menor $/kg) de la tarjeta.
+  await expect(firstCard.getByTestId("best-price-badge")).toHaveCount(1);
+  await expect(
+    firstCard.getByTestId("retailer-row").first().getByTestId("best-price-badge")
+  ).toBeVisible();
 });

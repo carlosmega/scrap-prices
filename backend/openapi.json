@@ -733,7 +733,7 @@
         "type": "object"
       },
       "CanonicalProductRefOut": {
-        "description": "Subconjunto público del producto canónico para el resultado de búsqueda.",
+        "description": "Subconjunto público del producto canónico para el resultado de búsqueda.\n\nF031: `mass_kg` (peso de una pieza canónica) es el factor de conversión que\npermite a la UI explicar la normalización; None si el canónico no es\nnormalizable. String Decimal por exactitud.",
         "properties": {
           "id": {
             "title": "Id",
@@ -750,6 +750,18 @@
           "unit": {
             "title": "Unit",
             "type": "string"
+          },
+          "mass_kg": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mass Kg"
           }
         },
         "required": [
@@ -762,7 +774,7 @@
         "type": "object"
       },
       "PriceByRetailerOut": {
-        "description": "Precio más fresco de un retailer para un canónico en una zona.\n\n`price`/`captured_at` son None cuando el retailer no tiene observación en la\nzona (entonces `is_available=False`). `price` se serializa como string del\nDecimal para no perder exactitud monetaria (PRD §8).",
+        "description": "Precio más fresco de un retailer para un canónico en una zona.\n\n`price`/`captured_at` son None cuando el retailer no tiene observación en la\nzona (entonces `is_available=False`). `price` se serializa como string del\nDecimal para no perder exactitud monetaria (PRD §8).\n\nF031: `price` es el valor NATIVO del retailer (transparencia: \"listado a\n$X/ton\"); `sale_unit` es su unidad estructurada (`\"\"` = desconocida). La\ncomparación cross-retailer usa los campos NORMALIZADOS `price_per_piece`\n(titular de obra) y `price_per_kg` (base de orden/menor-precio). Cualquiera\nde los dos es None cuando no se puede normalizar (falta `mass_kg`, unidad\ndesconocida o sin precio en la zona). También como string Decimal.",
         "properties": {
           "retailer": {
             "$ref": "#/components/schemas/RetailerRefOut"
@@ -808,6 +820,35 @@
           "url": {
             "title": "Url",
             "type": "string"
+          },
+          "sale_unit": {
+            "default": "",
+            "title": "Sale Unit",
+            "type": "string"
+          },
+          "price_per_piece": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Piece"
+          },
+          "price_per_kg": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Price Per Kg"
           }
         },
         "required": [
@@ -859,7 +900,7 @@
         "type": "object"
       },
       "CanonicalProductDetailOut": {
-        "description": "Producto canónico expandido para el detalle (incluye `specs` libres).",
+        "description": "Producto canónico expandido para el detalle (incluye `specs` libres).\n\nF031: incluye `mass_kg` (factor de conversión para la normalización; None si\nno es normalizable). String Decimal por exactitud.",
         "properties": {
           "id": {
             "title": "Id",
@@ -876,6 +917,18 @@
           "unit": {
             "title": "Unit",
             "type": "string"
+          },
+          "mass_kg": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mass Kg"
           },
           "specs": {
             "additionalProperties": true,
@@ -894,7 +947,7 @@
         "type": "object"
       },
       "PriceHistoryPointOut": {
-        "description": "Una lectura histórica de precio (una `PriceObservation`) con su retailer.\n\n`price` se serializa como string del Decimal por exactitud monetaria\n(PRD §8). El historial combina todos los retailers en la zona, ordenado por\n`-captured_at` (la UI de F021 puede agrupar por retailer).",
+        "description": "Una lectura histórica de precio (una `PriceObservation`) con su retailer.\n\n`price` se serializa como string del Decimal por exactitud monetaria\n(PRD §8). El historial combina todos los retailers en la zona, ordenado por\n`-captured_at` (la UI de F021 puede agrupar por retailer).\n\nF031: cada punto gana `sale_unit` para ETIQUETAR su unidad nativa (`\"\"` =\ndesconocida). El historial NO se normaliza (fuera de alcance): `price` sigue\nsiendo el valor nativo.",
         "properties": {
           "retailer": {
             "$ref": "#/components/schemas/RetailerRefOut"
@@ -916,6 +969,11 @@
           "captured_at": {
             "format": "date-time",
             "title": "Captured At",
+            "type": "string"
+          },
+          "sale_unit": {
+            "default": "",
+            "title": "Sale Unit",
             "type": "string"
           }
         },

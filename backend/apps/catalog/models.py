@@ -52,6 +52,20 @@ class CanonicalProduct(TimeStampedUUIDModel):
         related_name="products",
     )
     unit = models.CharField(max_length=16, choices=Unit.choices)
+    # F031: peso de UNA pieza/unidad canónica en kg (masa nominal NMX × longitud).
+    # Es el factor de conversión que permite normalizar precios cross-retailer
+    # (HD lista por tonelada, CR por kg). Editable en Admin; null = no
+    # normalizable → la UI cae a solo-precio-nativo.
+    mass_kg = models.DecimalField(
+        max_digits=8,
+        decimal_places=3,
+        null=True,
+        blank=True,
+        help_text=(
+            "Peso de UNA pieza/unidad canónica en kg (NMX masa nominal × longitud). "
+            "Null = no normalizable: la UI cae a solo-precio-nativo."
+        ),
+    )
     # specs libres por producto: p.ej. {calibre, diametro, longitud, marca,
     # presentacion}. JSON para no rigidizar el esquema en MVP.
     specs = models.JSONField(default=dict, blank=True)
@@ -72,6 +86,13 @@ class RetailerProduct(TimeStampedUUIDModel):
         MANUAL = "manual", "Manual"
         REJECTED = "rejected", "Rechazado"
 
+    class SaleUnit(models.TextChoices):
+        PIEZA = "pieza", "Pieza"
+        KG = "kg", "Kilogramo"
+        TONELADA = "tonelada", "Tonelada"
+        SACO = "saco", "Saco"
+        METRO = "m", "Metro"
+
     retailer = models.ForeignKey(
         Retailer,
         on_delete=models.CASCADE,
@@ -80,7 +101,20 @@ class RetailerProduct(TimeStampedUUIDModel):
     external_sku = models.CharField(max_length=200)
     raw_name = models.CharField(max_length=300)
     url = models.URLField(blank=True)
+    # Texto/código crudo del retailer (auditoría): se conserva tal cual.
     unit_raw = models.CharField(max_length=120, blank=True)
+    # F031: unidad ESTRUCTURADA en que el retailer LISTA el precio. Habilita la
+    # normalización (kg/tonelada/pieza). Blank = desconocida (no normalizable);
+    # se cura en Admin o la fija el adapter de ingestión.
+    sale_unit = models.CharField(
+        max_length=16,
+        choices=SaleUnit.choices,
+        blank=True,
+        help_text=(
+            "Unidad en que el retailer LISTA el precio. Blank = desconocida "
+            "(no normalizable). Se cura en Admin / la fija el adapter."
+        ),
+    )
     brand = models.CharField(max_length=200, blank=True)
     canonical_product = models.ForeignKey(
         CanonicalProduct,

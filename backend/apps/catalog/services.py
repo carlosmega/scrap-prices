@@ -9,8 +9,10 @@ FTS llega en M5. El orden (`price`|`name`) también vive aquí.
 """
 
 import unicodedata
+from decimal import Decimal
 
 from apps.catalog.models import CanonicalProduct
+from apps.catalog.normalization import normaliza_precio
 from apps.catalog.schemas import (
     CanonicalProductDetailOut,
     CanonicalProductRefOut,
@@ -41,27 +43,49 @@ def _normalizar(texto: str) -> str:
     return "".join(ch for ch in descompuesto if not unicodedata.combining(ch))
 
 
-def _ensamblar_precio(retailer_product, zone: Zone) -> PriceByRetailerOut:
+def _ensamblar_precio(
+    retailer_product, zone: Zone, mass_kg: Decimal | None
+) -> PriceByRetailerOut:
     """Arma el PriceByRetailerOut de un RetailerProduct con su precio más fresco.
 
     Sin observación en la zona → price/captured_at None, is_available False.
+
+    F031: además del precio NATIVO, expone la unidad estructurada (`sale_unit`)
+    y el precio NORMALIZADO (`price_per_piece`/`price_per_kg`), calculado con
+    `normaliza_precio(precio_nativo, sale_unit, mass_kg)`. Cualquiera de los
+    normalizados es None cuando no se puede convertir (sin precio, sin `mass_kg`
+    o unidad desconocida).
     """
     obs = ultima_observacion(retailer_product, zone=zone)
     retailer = retailer_product.retailer
+    precio = obs.price if obs is not None else None
+    per_piece, per_kg = normaliza_precio(precio, retailer_product.sale_unit, mass_kg)
     return PriceByRetailerOut(
         retailer=RetailerRefOut(slug=retailer.slug, name=retailer.name),
         retailer_product_id=str(retailer_product.id),
-        price=(obs.price if obs is not None else None),
+        price=precio,
         currency=(obs.currency if obs is not None else "MXN"),
         is_available=(obs.is_available if obs is not None else False),
         captured_at=(obs.captured_at if obs is not None else None),
         url=retailer_product.url,
+        sale_unit=retailer_product.sale_unit,
+        price_per_piece=per_piece,
+        price_per_kg=per_kg,
     )
 
 
-def _menor_precio_disponible(prices: list[PriceByRetailerOut]):
-    """Menor precio entre los retailers disponibles; None si ninguno tiene precio."""
-    disponibles = [p.price for p in prices if p.price is not None and p.is_available]
+def _menor_precio_por_kg(prices: list[PriceByRetailerOut]):
+    """Menor `price_per_kg` entre los retailers disponibles; None si ninguno tiene.
+
+    F031: la base de comparación cross-retailer es **$/kg** (agnóstica a la
+    longitud), NO el precio nativo crudo. Solo cuentan los retailers disponibles
+    con `price_per_kg` computado.
+    """
+    disponibles = [
+        p.price_per_kg
+        for p in prices
+        if p.price_per_kg is not None and p.is_available
+    ]
     return min(disponibles) if disponibles else None
 
 
@@ -74,7 +98,10 @@ def buscar(
 
     Devuelve None si la zona no existe o está inactiva (el router lo traduce a
     404). En caso contrario, devuelve la lista de `SearchResultOut` ordenada por
-    `sort` (`price`: menor precio disponible primero; `name`: alfabético).
+    `sort` (`price`: menor `price_per_kg` disponible primero; `name`: alfabético).
+
+    F031: el orden por `price` y el "menor precio" se basan en `price_per_kg`
+    (comparación cross-retailer real), NO en el número nativo crudo.
     """
     zona = Zone.objects.filter(id=zone_id, is_active=True).first()
     if zona is None:
@@ -97,7 +124,7 @@ def buscar(
             .select_related("retailer")
             .order_by("retailer__name")
         )
-        prices = [_ensamblar_precio(rp, zona) for rp in retailer_products]
+        prices = [_ensamblar_precio(rp, zona, canonico.mass_kg) for rp in retailer_products]
 
         item = SearchResultOut(
             canonical_product=CanonicalProductRefOut(
@@ -105,14 +132,15 @@ def buscar(
                 name=canonico.name,
                 category=canonico.category.name,
                 unit=canonico.unit,
+                mass_kg=canonico.mass_kg,
             ),
             prices=prices,
         )
-        resultados.append((item, _menor_precio_disponible(prices), canonico.name))
+        resultados.append((item, _menor_precio_por_kg(prices), canonico.name))
 
     if sort == "name":
         resultados.sort(key=lambda r: _normalizar(r[2]))
-    else:  # sort == "price": menor precio disponible primero; sin precio al final.
+    else:  # sort == "price": menor price_per_kg disponible primero; sin él al final.
         resultados.sort(
             key=lambda r: (r[1] is None, r[1] if r[1] is not None else 0, _normalizar(r[2]))
         )
@@ -126,6 +154,9 @@ def _historial(canonico: CanonicalProduct, zona: Zone, n: int) -> list[PriceHist
     Combina todos los `RetailerProduct` activos enlazados al canónico; cada punto
     lleva su retailer. La consulta se apoya en el índice (retailer_product, zone,
     -captured_at) y el orden por `-captured_at` del modelo.
+
+    F031: cada punto gana `sale_unit` (etiqueta de unidad nativa); el `price` NO
+    se normaliza (el historial queda en valor nativo, fuera de alcance).
     """
     observaciones = (
         PriceObservation.objects.filter(
@@ -146,6 +177,7 @@ def _historial(canonico: CanonicalProduct, zona: Zone, n: int) -> list[PriceHist
             currency=obs.currency,
             is_available=obs.is_available,
             captured_at=obs.captured_at,
+            sale_unit=obs.retailer_product.sale_unit,
         )
         for obs in observaciones
     ]
@@ -180,7 +212,7 @@ def detalle_producto(
         .select_related("retailer")
         .order_by("retailer__name")
     )
-    prices = [_ensamblar_precio(rp, zona) for rp in retailer_products]
+    prices = [_ensamblar_precio(rp, zona, canonico.mass_kg) for rp in retailer_products]
 
     return ProductDetailOut(
         canonical_product=CanonicalProductDetailOut(
@@ -188,6 +220,7 @@ def detalle_producto(
             name=canonico.name,
             category=canonico.category.name,
             unit=canonico.unit,
+            mass_kg=canonico.mass_kg,
             specs=canonico.specs,
         ),
         prices=prices,

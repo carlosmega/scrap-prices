@@ -24,7 +24,7 @@ from apps.geo.models import Retailer, RetailerLocation, Zone
 from apps.prices.models import PriceObservation, ScrapeRun
 from apps.scraping.exceptions import RetailerBlockedError, ScrapeError
 from apps.scraping.homedepot import HOMEDEPOT_BASE_URL, HomeDepotAdapter
-from apps.scraping.parsers import homedepot_unit
+from apps.scraping.parsers import homedepot_sale_unit, homedepot_unit
 
 
 def abrir_corrida(retailer: Retailer, zone: Zone | None = None) -> ScrapeRun:
@@ -83,13 +83,17 @@ def _get_or_create_retailer_product(
     del modelo) para curarse a mano en Admin (PRD D1). Idempotente: dos corridas
     sobre el mismo SKU no duplican la fila (clave única retailer+external_sku).
     """
+    unit_raw = homedepot_unit(raw_price.raw_payload)
     rp, _created = RetailerProduct.objects.get_or_create(
         retailer=retailer,
         external_sku=raw_price.sku,
         defaults={
             "raw_name": raw_price.raw_name,
             "url": f"{HOMEDEPOT_BASE_URL}/p/{raw_price.sku}",
-            "unit_raw": homedepot_unit(raw_price.raw_payload),
+            "unit_raw": unit_raw,
+            # F031: unidad estructurada derivada del código UN/ECE de HD; "" si
+            # desconocida (se cura en Admin, como el matching a canónico).
+            "sale_unit": homedepot_sale_unit(unit_raw),
         },
     )
     return rp

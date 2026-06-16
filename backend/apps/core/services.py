@@ -8,7 +8,7 @@ Incluye:
 """
 
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal
 
 from apps.catalog.models import CanonicalProduct, Category, RetailerProduct
 from apps.core.schemas import HealthOut
@@ -26,11 +26,22 @@ def get_health() -> HealthOut:
 # Metro, categoría piloto varilla. Precios ficticios pero verosímiles. Todo el
 # grafo se siembra con get_or_create/update_or_create -> idempotente.
 
+# Unidad de venta nativa por retailer (F031): HD lista por TONELADA, Construrama
+# por KILOGRAMO. Sembrarlas distintas ejerce la normalización end-to-end sin red.
+_SALE_UNIT_POR_RETAILER = {
+    "home-depot": RetailerProduct.SaleUnit.TONELADA,
+    "construrama": RetailerProduct.SaleUnit.KG,
+}
+
 # 3 varillas corrugadas (CanonicalProduct). slug-like key vía specs+name.
+# F031: `mass_kg` = masa nominal NMX (kg/m) × longitud (m). Es el factor de
+# conversión que habilita la comparación cross-retailer. `precios` son los
+# NATIVOS base de cada retailer EN SU UNIDAD (HD $/ton, CR $/kg).
 _VARILLAS = [
     {
         "name": 'Varilla corrugada 3/8" (#3) 12m',
         "specs": {"calibre": "#3", "diametro": '3/8"', "longitud_m": 12},
+        "mass_kg": Decimal("6.684"),  # 0.557 kg/m × 12 m
         "skus": {
             "home-depot": {
                 "external_sku": "HD-VAR-38-12",
@@ -41,12 +52,14 @@ _VARILLAS = [
                 "raw_name": "Varilla corrugada 3/8 12m",
             },
         },
-        # precios base por retailer (mas reciente arranca aqui y crece en el historial)
-        "precios": {"home-depot": "189.50", "construrama": "182.00"},
+        # precios base NATIVOS por retailer (HD $/ton, CR $/kg). El historial crece
+        # multiplicativamente (factor sobre el base) para ser agnostico a la unidad.
+        "precios": {"home-depot": "19500.00", "construrama": "20.90"},
     },
     {
         "name": 'Varilla corrugada 1/2" (#4) 12m',
         "specs": {"calibre": "#4", "diametro": '1/2"', "longitud_m": 12},
+        "mass_kg": Decimal("11.952"),  # 0.996 kg/m × 12 m
         "skus": {
             "home-depot": {
                 "external_sku": "HD-VAR-12-12",
@@ -57,11 +70,12 @@ _VARILLAS = [
                 "raw_name": "Varilla corrugada 1/2 12m",
             },
         },
-        "precios": {"home-depot": "329.00", "construrama": "315.50"},
+        "precios": {"home-depot": "19500.00", "construrama": "20.90"},
     },
     {
         "name": 'Varilla corrugada 1/4" (#2) 6m',
         "specs": {"calibre": "#2", "diametro": '1/4"', "longitud_m": 6},
+        "mass_kg": Decimal("1.488"),  # 0.248 kg/m × 6 m
         "skus": {
             "home-depot": {"external_sku": "HD-VAR-14-6", "raw_name": "Varilla 1/4 6 m"},
             "construrama": {
@@ -69,17 +83,21 @@ _VARILLAS = [
                 "raw_name": "Varilla corrugada 1/4 6m",
             },
         },
-        "precios": {"home-depot": "64.90", "construrama": "59.50"},
+        "precios": {"home-depot": "20500.00", "construrama": "19.80"},
     },
 ]
 
-# Tres capturas historicas (de mas antigua a mas reciente). El precio sube en
-# cada captura para que "ultima observacion" sea inequivoca.
+# Tres capturas historicas (de mas antigua a mas reciente). F031: el precio crece
+# MULTIPLICATIVAMENTE (factor sobre el base, cuantizado 2dp) para ser agnostico a
+# la unidad nativa; la ultima captura (×1.030) es inequivocamente la mas alta.
 _CAPTURAS = [
-    {"captured_at": datetime(2026, 5, 30, 9, 0, tzinfo=UTC), "delta": Decimal("0")},
-    {"captured_at": datetime(2026, 6, 6, 9, 0, tzinfo=UTC), "delta": Decimal("4.50")},
-    {"captured_at": datetime(2026, 6, 13, 9, 0, tzinfo=UTC), "delta": Decimal("9.00")},
+    {"captured_at": datetime(2026, 5, 30, 9, 0, tzinfo=UTC), "factor": Decimal("1.000")},
+    {"captured_at": datetime(2026, 6, 6, 9, 0, tzinfo=UTC), "factor": Decimal("1.015")},
+    {"captured_at": datetime(2026, 6, 13, 9, 0, tzinfo=UTC), "factor": Decimal("1.030")},
 ]
+
+# Cuantizacion monetaria del historial multiplicativo: 2 decimales, ROUND_HALF_UP.
+_CENTAVOS = Decimal("0.01")
 
 
 def seed_demo() -> dict[str, int]:
@@ -175,6 +193,7 @@ def seed_demo() -> dict[str, int]:
             defaults={
                 "category": categoria,
                 "unit": CanonicalProduct.Unit.PIEZA,
+                "mass_kg": varilla["mass_kg"],
                 "specs": varilla["specs"],
             },
         )
@@ -187,12 +206,18 @@ def seed_demo() -> dict[str, int]:
                     "raw_name": sku_info["raw_name"],
                     "url": f"{retailer.base_url}/p/{sku_info['external_sku']}",
                     "canonical_product": canonico,
+                    "sale_unit": _SALE_UNIT_POR_RETAILER[slug],
                     "match_status": RetailerProduct.MatchStatus.MANUAL,
                     "match_confidence": 1.0,
                 },
             )
             base = Decimal(varilla["precios"][slug])
             for captura in _CAPTURAS:
+                # Historial multiplicativo: base × factor, cuantizado a 2dp. La
+                # ultima captura (×1.030) es la mas reciente y la mas alta.
+                precio = (base * captura["factor"]).quantize(
+                    _CENTAVOS, rounding=ROUND_HALF_UP
+                )
                 # Clave natural: (retailer_product, zona, captured_at) -> sin duplicar.
                 _, creada = PriceObservation.objects.update_or_create(
                     retailer_product=rp,
@@ -200,7 +225,7 @@ def seed_demo() -> dict[str, int]:
                     captured_at=captura["captured_at"],
                     defaults={
                         "retailer_location": (hd_loc if slug == "home-depot" else cr_loc),
-                        "price": base + captura["delta"],
+                        "price": precio,
                         "currency": "MXN",
                         "is_available": True,
                         "source": PriceObservation.Source.XHR,

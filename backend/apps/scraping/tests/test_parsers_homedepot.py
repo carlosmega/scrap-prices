@@ -12,8 +12,11 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from pathlib import Path
 
+import pytest
+
 from apps.scraping.parsers import (
     HOMEDEPOT_SOURCE,
+    homedepot_sale_unit,
     homedepot_unit,
     parse_homedepot,
     parse_homedepot_prices,
@@ -103,3 +106,24 @@ def test_parse_payload_vacio_no_revienta():
     """Un payload sin `contents` devuelve lista vacía (robustez)."""
     assert parse_homedepot({}, store_id=STORE_ID) == []
     assert parse_homedepot_prices({}, store_id=STORE_ID, captured_at=CAPTURED_AT) == []
+
+
+@pytest.mark.parametrize(
+    ("code", "esperado"),
+    [
+        ("C62", "pieza"),
+        ("TN", "tonelada"),
+        ("TNE", "tonelada"),
+        ("KGM", "kg"),
+        ("MTR", "m"),
+        # robustez: minúsculas y espacios se normalizan.
+        ("c62", "pieza"),
+        (" tne ", "tonelada"),
+        # desconocido / vacío → "" (no normalizable, se cura en Admin).
+        ("XXX", ""),
+        ("", ""),
+    ],
+)
+def test_homedepot_sale_unit_mapea_codigo_unece(code, esperado):
+    """El código UN/ECE de HD se mapea a SaleUnit; desconocido → ''."""
+    assert homedepot_sale_unit(code) == esperado

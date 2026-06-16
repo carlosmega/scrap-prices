@@ -201,5 +201,12 @@
     "capas": ["frontend", "e2e"],
     "spec": "specs/F030-fix-hydration.md",
     "status": "done"
+  },
+  {
+    "id": "F031",
+    "titulo": "M5 Normalizacion de unidad: mass_kg + sale_unit + servicio normaliza_precio; busqueda/UI por $/kg con titular $/pieza y precio nativo visible",
+    "capas": ["backend", "frontend", "e2e"],
+    "spec": "specs/F031-normalizacion-unidad.md",
+    "status": "done"
   }
 ]

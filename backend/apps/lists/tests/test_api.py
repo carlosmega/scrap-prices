@@ -80,7 +80,9 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
     assert r.status_code == 200
     assert [item["id"] for item in r.json()] == [list_id]
 
-    # Agregar ítem 1 (HD, 10 piezas). Snapshot = última observación seed 3/8 HD = 198.50.
+    # Agregar ítem 1 (HD, 10 piezas). Snapshot = última observación NATIVA seed
+    # 3/8 HD (×1.030) = 20085.00 (la cotización usa precio nativo, F031 no la
+    # normaliza). 10 × 20085.00 = 200850.00.
     r = client.post(
         f"/lists/{list_id}/items",
         json={"retailer_product_id": str(sku_hd.id), "quantity": 10},
@@ -99,11 +101,12 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
         "line_total",
     }
     assert item1["retailer"]["slug"] == "home-depot"
-    assert item1["captured_price"] == "198.50"
+    assert item1["captured_price"] == "20085.00"
     assert item1["captured_at"].startswith("2026-06-13")
-    assert item1["line_total"] == "1985.00"
+    assert item1["line_total"] == "200850.00"
 
-    # Agregar ítem 2 (CR, 2 piezas). Snapshot = última observación seed 3/8 CR = 191.00.
+    # Agregar ítem 2 (CR, 2 piezas). Snapshot = última observación NATIVA seed
+    # 3/8 CR (×1.030) = 21.53. 2 × 21.53 = 43.06.
     r = client.post(
         f"/lists/{list_id}/items",
         json={"retailer_product_id": str(sku_cr.id), "quantity": 2},
@@ -111,8 +114,8 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
     )
     assert r.status_code == 201
     item2 = r.json()
-    assert item2["captured_price"] == "191.00"
-    assert item2["line_total"] == "382.00"
+    assert item2["captured_price"] == "21.53"
+    assert item2["line_total"] == "43.06"
     item2_id = item2["id"]
 
     # Editar cantidad del ítem 1: 10 -> 5.
@@ -123,9 +126,9 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
     )
     assert r.status_code == 200
     assert r.json()["quantity"] == 5
-    assert r.json()["line_total"] == "992.50"  # 5 * 198.50
+    assert r.json()["line_total"] == "100425.00"  # 5 * 20085.00
 
-    # Detalle con subtotal/total: 5*198.50 + 2*191.00 = 992.50 + 382.00 = 1374.50.
+    # Detalle con subtotal/total: 5*20085.00 + 2*21.53 = 100425.00 + 43.06 = 100468.06.
     r = client.get(f"/lists/{list_id}", headers=HDR_A)
     assert r.status_code == 200
     detalle = r.json()
@@ -141,20 +144,20 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
     }
     assert detalle["item_count"] == 2
     assert len(detalle["items"]) == 2
-    assert detalle["subtotal"] == "1374.50"
-    assert detalle["total"] == "1374.50"
+    assert detalle["subtotal"] == "100468.06"
+    assert detalle["total"] == "100468.06"
 
     # Quitar el ítem 2 (204 sin body).
     r = client.delete(f"/lists/{list_id}/items/{item2_id}", headers=HDR_A)
     assert r.status_code == 204
     assert r.content in (b"", b"null")
 
-    # Detalle de nuevo: solo queda el ítem 1, subtotal = 992.50.
+    # Detalle de nuevo: solo queda el ítem 1, subtotal = 100425.00.
     r = client.get(f"/lists/{list_id}", headers=HDR_A)
     assert r.status_code == 200
     detalle = r.json()
     assert detalle["item_count"] == 1
-    assert detalle["subtotal"] == "992.50"
+    assert detalle["subtotal"] == "100425.00"
 
     # Borrar la lista (204).
     r = client.delete(f"/lists/{list_id}", headers=HDR_A)
@@ -203,13 +206,14 @@ def test_snapshot_inmutable_ante_nueva_observacion(client, seeded):
     assert r.status_code == 201
     item_id = r.json()["id"]
     precio_capturado = r.json()["captured_price"]
-    assert precio_capturado == "198.50"
+    # Snapshot NATIVO de la última observación seed 3/8 HD (×1.030) = 20085.00.
+    assert precio_capturado == "20085.00"
 
     # Llega una observación MÁS reciente y mucho más cara.
     PriceObservation.objects.create(
         retailer_product=sku_hd,
         zone=zona,
-        price=Decimal("999.99"),
+        price=Decimal("99999.99"),
         source=PriceObservation.Source.XHR,
         captured_at=datetime(2026, 7, 1, 9, 0, tzinfo=UTC),
     )
@@ -217,8 +221,8 @@ def test_snapshot_inmutable_ante_nueva_observacion(client, seeded):
     # El detalle sigue mostrando el snapshot original, no el nuevo precio.
     r = client.get(f"/lists/{list_id}", headers=HDR_A)
     item = next(i for i in r.json()["items"] if i["id"] == item_id)
-    assert item["captured_price"] == "198.50"
-    assert r.json()["subtotal"] == "198.50"
+    assert item["captured_price"] == "20085.00"
+    assert r.json()["subtotal"] == "20085.00"
 
 
 # --- Scoping por sesión -----------------------------------------------------

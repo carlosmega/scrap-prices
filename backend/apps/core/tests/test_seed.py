@@ -77,13 +77,16 @@ def test_seed_crea_el_grafo_de_la_spec():
     cat = Category.objects.get(slug="varilla")
     assert cat.name == "Varilla"
 
-    # 3-5 CanonicalProduct de varilla, unidad pieza, con specs.
+    # 3-5 CanonicalProduct de varilla, unidad pieza, con specs y mass_kg (F031).
     canonicos = CanonicalProduct.objects.filter(category=cat)
     assert 3 <= canonicos.count() <= 5
     for cp in canonicos:
         assert cp.unit == CanonicalProduct.Unit.PIEZA
         assert cp.specs  # specs no vacío (calibre/diametro/longitud)
         assert "calibre" in cp.specs
+        # F031: el seed siembra el factor de conversión (peso de la pieza canónica).
+        assert cp.mass_kg is not None
+        assert cp.mass_kg > 0
 
     # RetailerProduct por (canónico x retailer), matcheado manual.
     assert RetailerProduct.objects.count() == canonicos.count() * 2
@@ -95,6 +98,19 @@ def test_seed_crea_el_grafo_de_la_spec():
         assert rp.external_sku
         assert rp.raw_name
         assert rp.url
+    # F031: HD lista por tonelada, Construrama por kg (ejerce la normalización).
+    assert (
+        RetailerProduct.objects.filter(retailer=hd)
+        .exclude(sale_unit=RetailerProduct.SaleUnit.TONELADA)
+        .count()
+        == 0
+    )
+    assert (
+        RetailerProduct.objects.filter(retailer=cr)
+        .exclude(sale_unit=RetailerProduct.SaleUnit.KG)
+        .count()
+        == 0
+    )
 
 
 @pytest.mark.django_db

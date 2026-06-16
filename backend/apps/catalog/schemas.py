@@ -25,6 +25,13 @@ class PriceByRetailerOut(Schema):
     `price`/`captured_at` son None cuando el retailer no tiene observación en la
     zona (entonces `is_available=False`). `price` se serializa como string del
     Decimal para no perder exactitud monetaria (PRD §8).
+
+    F031: `price` es el valor NATIVO del retailer (transparencia: "listado a
+    $X/ton"); `sale_unit` es su unidad estructurada (`""` = desconocida). La
+    comparación cross-retailer usa los campos NORMALIZADOS `price_per_piece`
+    (titular de obra) y `price_per_kg` (base de orden/menor-precio). Cualquiera
+    de los dos es None cuando no se puede normalizar (falta `mass_kg`, unidad
+    desconocida o sin precio en la zona). También como string Decimal.
     """
 
     retailer: RetailerRefOut
@@ -34,15 +41,24 @@ class PriceByRetailerOut(Schema):
     is_available: bool = False
     captured_at: datetime | None = None
     url: str
+    sale_unit: str = ""
+    price_per_piece: Decimal | None = None
+    price_per_kg: Decimal | None = None
 
 
 class CanonicalProductRefOut(Schema):
-    """Subconjunto público del producto canónico para el resultado de búsqueda."""
+    """Subconjunto público del producto canónico para el resultado de búsqueda.
+
+    F031: `mass_kg` (peso de una pieza canónica) es el factor de conversión que
+    permite a la UI explicar la normalización; None si el canónico no es
+    normalizable. String Decimal por exactitud.
+    """
 
     id: str
     name: str
     category: str
     unit: str
+    mass_kg: Decimal | None = None
 
 
 class SearchResultOut(Schema):
@@ -53,12 +69,17 @@ class SearchResultOut(Schema):
 
 
 class CanonicalProductDetailOut(Schema):
-    """Producto canónico expandido para el detalle (incluye `specs` libres)."""
+    """Producto canónico expandido para el detalle (incluye `specs` libres).
+
+    F031: incluye `mass_kg` (factor de conversión para la normalización; None si
+    no es normalizable). String Decimal por exactitud.
+    """
 
     id: str
     name: str
     category: str
     unit: str
+    mass_kg: Decimal | None = None
     specs: dict
 
 
@@ -68,6 +89,10 @@ class PriceHistoryPointOut(Schema):
     `price` se serializa como string del Decimal por exactitud monetaria
     (PRD §8). El historial combina todos los retailers en la zona, ordenado por
     `-captured_at` (la UI de F021 puede agrupar por retailer).
+
+    F031: cada punto gana `sale_unit` para ETIQUETAR su unidad nativa (`""` =
+    desconocida). El historial NO se normaliza (fuera de alcance): `price` sigue
+    siendo el valor nativo.
     """
 
     retailer: RetailerRefOut
@@ -75,6 +100,7 @@ class PriceHistoryPointOut(Schema):
     currency: str = "MXN"
     is_available: bool
     captured_at: datetime
+    sale_unit: str = ""
 
 
 class ProductDetailOut(Schema):
