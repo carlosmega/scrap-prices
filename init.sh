@@ -114,27 +114,15 @@ elif [ "$miss" -eq 0 ]; then
 fi
 
 # --- Fase 2: infraestructura --------------------------------------------------
-# MVP corre con SQLite y sin Docker. Esta fase solo actúa si Docker está presente
-# (ruta de migración a Postgres); si no, se reporta como no requerida, sin fallar.
+# El MVP corre con SQLite y SIN Docker (decisión del equipo). Esta fase NO
+# levanta Docker ni lo exige: Postgres/Redis vía docker-compose.yml son el
+# DESTINO de una migración futura, no parte del ciclo de verificación del MVP.
+# Por eso Fase 2 NUNCA produce ROJO — a lo sumo queda 'pendiente' (amarillo).
+# (Intentar `docker compose up` aquí daba falsos rojos cuando los puertos
+# 5432/6379 estaban ocupados por otros proyectos o el daemon no corría, pese a
+# que la infra ni se usa en el MVP.)
 fase "Fase 2 · Infraestructura (Postgres + Redis — opcional, migración futura)"
-if [ "$MODE" = "quick" ]; then
-  pend "saltada en modo --quick"
-elif command -v docker >/dev/null 2>&1; then
-  if docker compose up -d >/dev/null 2>&1; then
-    ok "docker compose up -d"
-    deadline=$((SECONDS + 60)); healthy=0
-    while [ $SECONDS -lt $deadline ]; do
-      h=$(docker compose ps --format json 2>/dev/null | jq -rs '[.[] | select(.Health=="healthy")] | length' 2>/dev/null || echo 0)
-      [ "$h" -ge 2 ] && healthy=1 && break
-      sleep 2
-    done
-    [ "$healthy" -eq 1 ] && ok "db y redis healthy" || bad "los servicios no llegaron a healthy en 60s"
-  else
-    bad "docker compose up falló"
-  fi
-else
-  pend "Docker no usado en MVP (backend corre con SQLite); infra Postgres/Redis diferida"
-fi
+pend "Docker no usado en el MVP (backend corre con SQLite); infra Postgres/Redis diferida a una migración futura"
 
 # --- Fase 3: backend -----------------------------------------------------------
 fase "Fase 3 · Backend (Django + Ninja)"
