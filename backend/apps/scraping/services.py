@@ -22,9 +22,17 @@ from django.utils import timezone
 from apps.catalog.models import RetailerProduct
 from apps.geo.models import Retailer, RetailerLocation, Zone
 from apps.prices.models import PriceObservation, ScrapeRun
+from apps.scraping.construrama import ConstruramaAdapter
 from apps.scraping.exceptions import RetailerBlockedError, ScrapeError
 from apps.scraping.homedepot import HOMEDEPOT_BASE_URL, HomeDepotAdapter
-from apps.scraping.parsers import homedepot_sale_unit, homedepot_unit
+from apps.scraping.parsers import (
+    construrama_brand,
+    construrama_sale_unit,
+    construrama_unit_raw,
+    construrama_url,
+    homedepot_sale_unit,
+    homedepot_unit,
+)
 
 
 def abrir_corrida(retailer: Retailer, zone: Zone | None = None) -> ScrapeRun:
@@ -74,9 +82,7 @@ def cerrar_corrida(
 # --- Ingestión Home Depot (F025) -------------------------------------------
 
 
-def _get_or_create_retailer_product(
-    retailer: Retailer, raw_price
-) -> RetailerProduct:
+def _get_or_create_retailer_product(retailer: Retailer, raw_price) -> RetailerProduct:
     """`get_or_create` de `RetailerProduct` por (retailer, external_sku).
 
     El matching al `CanonicalProduct` NO se hace aquí: queda `unmatched` (default
@@ -99,31 +105,29 @@ def _get_or_create_retailer_product(
     return rp
 
 
-def ingest_homedepot(
+def _run_ingestion(
     zone: Zone,
     location: RetailerLocation,
     category: str,
+    adapter,
+    get_or_create_rp,
     *,
-    adapter: HomeDepotAdapter | None = None,
     captured_at: datetime | None = None,
 ) -> ScrapeRun:
-    """Corrida de scraping de Home Depot: precios → `PriceObservation` (F025).
+    """Núcleo común de una corrida (F025/F026): precios → `PriceObservation`.
 
-    Flujo:
+    Flujo (idéntico para cualquier retailer; solo cambia el `get_or_create_rp`):
     1. Abre un `ScrapeRun` (queda `failed` hasta cerrarse: default seguro).
-    2. Posiciona el adapter en la tienda (`set_zone`) y obtiene los `RawPrice`
-       de la categoría en una sola llamada de búsqueda (cortesía: menos requests).
-    3. Por cada SKU: `get_or_create` de `RetailerProduct` (matching manual) e
-       inserta una `PriceObservation` (source=xhr, captured_at, raw_payload) en la
-       zona/ubicación.
+    2. Obtiene los `RawPrice` de la categoría en UNA llamada (cortesía).
+    3. Por cada SKU: `get_or_create` de `RetailerProduct` (matching manual en
+       Admin) + una `PriceObservation` (source=xhr, captured_at, raw_payload).
     4. Cierra el `ScrapeRun` (ok/partial/failed, items_found, errors).
 
-    Guardrail §2.3: si HD bloquea (403/429/challenge), el adapter propaga
-    `RetailerBlockedError`; aquí NO se reintenta para evadir: se registra el
-    bloqueo, se cierra la corrida `failed`/`partial` y se relanza la excepción.
+    Guardrail §2.3: si el retailer bloquea (403/429/challenge), el adapter
+    propaga `RetailerBlockedError`; aquí NO se reintenta para evadir: se audita,
+    la corrida cierra `failed` y se relanza la excepción.
     """
     retailer = location.retailer
-    adapter = adapter or HomeDepotAdapter()
     captured_at = captured_at or timezone.now()
 
     run = abrir_corrida(retailer, zone)
@@ -131,9 +135,7 @@ def ingest_homedepot(
     items_found = 0
 
     try:
-        precios = adapter.fetch_products_with_prices(
-            category, location, captured_at=captured_at
-        )
+        precios = adapter.fetch_products_with_prices(category, location, captured_at=captured_at)
     except RetailerBlockedError as exc:
         # stop-if-blocked: NO se reintenta ni se evade. Se audita y se relanza.
         errors.append({"type": "blocked", "detail": str(exc), "status": exc.status_code})
@@ -146,7 +148,7 @@ def ingest_homedepot(
 
     for precio in precios:
         try:
-            rp = _get_or_create_retailer_product(retailer, precio)
+            rp = get_or_create_rp(retailer, precio)
             PriceObservation.objects.create(
                 retailer_product=rp,
                 zone=zone,
@@ -163,3 +165,80 @@ def ingest_homedepot(
             errors.append({"sku": precio.sku, "error": str(exc)})
 
     return cerrar_corrida(run, items_found=items_found, errors=errors)
+
+
+def ingest_homedepot(
+    zone: Zone,
+    location: RetailerLocation,
+    category: str,
+    *,
+    adapter: HomeDepotAdapter | None = None,
+    captured_at: datetime | None = None,
+) -> ScrapeRun:
+    """Corrida de scraping de Home Depot: precios → `PriceObservation` (F025).
+
+    Delega el flujo común en `_run_ingestion` con el `get_or_create_rp` de HD
+    (url `/p/{sku}`, unidad UN/ECE). Ver `_run_ingestion` para el detalle y el
+    guardrail stop-if-blocked.
+    """
+    adapter = adapter or HomeDepotAdapter()
+    return _run_ingestion(
+        zone,
+        location,
+        category,
+        adapter,
+        _get_or_create_retailer_product,
+        captured_at=captured_at,
+    )
+
+
+# --- Ingestión Construrama (F026) ------------------------------------------
+
+
+def _get_or_create_retailer_product_construrama(retailer: Retailer, raw_price) -> RetailerProduct:
+    """`get_or_create` de `RetailerProduct` de Construrama por (retailer, sku).
+
+    Deriva del hit crudo (`raw_price.raw_payload`): url absoluta del PDP
+    (`url_es_mx_string`), marca (`brand_string_mv` sin el token "brands"),
+    unidad cruda y `sale_unit` (F031) inferida del nombre ("Kilogramos"→kg,
+    "Pieza"→pieza). El matching al canónico queda `unmatched` (Admin). Idempotente
+    por la clave única (retailer, external_sku).
+    """
+    hit = raw_price.raw_payload
+    rp, _created = RetailerProduct.objects.get_or_create(
+        retailer=retailer,
+        external_sku=raw_price.sku,
+        defaults={
+            "raw_name": raw_price.raw_name,
+            "url": construrama_url(hit),
+            "brand": construrama_brand(hit),
+            "unit_raw": construrama_unit_raw(raw_price.raw_name),
+            "sale_unit": construrama_sale_unit(raw_price.raw_name),
+        },
+    )
+    return rp
+
+
+def ingest_construrama(
+    zone: Zone,
+    location: RetailerLocation,
+    category: str,
+    *,
+    adapter: ConstruramaAdapter | None = None,
+    captured_at: datetime | None = None,
+) -> ScrapeRun:
+    """Corrida de scraping de Construrama: precios Algolia → `PriceObservation`.
+
+    Delega el flujo común en `_run_ingestion` con el `get_or_create_rp` de
+    Construrama (url/brand/sale_unit del hit). Ver `_run_ingestion` para el
+    detalle y el guardrail stop-if-blocked.
+    """
+    adapter = adapter or ConstruramaAdapter()
+    return _run_ingestion(
+        zone,
+        location,
+        category,
+        adapter,
+        _get_or_create_retailer_product_construrama,
+        captured_at=captured_at,
+    )

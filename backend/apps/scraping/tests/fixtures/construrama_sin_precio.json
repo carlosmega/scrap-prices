@@ -1,0 +1,41 @@
+{
+  "results": [
+    {
+      "index": "construrama_mx",
+      "hits": [
+        {
+          "catalogVersion": "Online",
+          "code_string": "6000111693",
+          "objectID": "8827795406849",
+          "pk": "8827795406849",
+          "name_text_es_mx": "Varilla Corrugada Grado 42 De 1/2” 9.15 M, Kilogramos",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-corrugada-grado-42-de-12-915-m-kilogramos/p/6000111693",
+          "OSS7_priceValue_mxn_double": 258.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": ["brands", "GENÉRICO"],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs"
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "9999999999",
+          "objectID": "0000000000000",
+          "pk": "0000000000000",
+          "name_text_es_mx": "Producto Sin Precio En La Zona OSS7, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/producto-sin-precio/p/9999999999",
+          "OSS7_priceValue_mxn_double": 0.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": ["brands", "GENÉRICO"],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs"
+        }
+      ],
+      "nbHits": 2,
+      "page": 0,
+      "nbPages": 1,
+      "hitsPerPage": 20
+    }
+  ]
+}

@@ -1,0 +1,146 @@
+{
+  "results": [
+    {
+      "index": "construrama_mx",
+      "hits": [
+        {
+          "catalogVersion": "Online",
+          "code_string": "6000111693",
+          "objectID": "8827795406849",
+          "pk": 8827795406849,
+          "name_text_es_mx": "Varilla Corrugada Grado 42 De 1/2” 9.15 M, Kilogramos",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-corrugada-grado-42-de-12-915-m-kilogramos/p/6000111693",
+          "OSS7_priceValue_mxn_double": 258.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3wxMjk0OHxpbWFnZS93ZWJwfGltYWdlcy9oYzkvaGE3Lzk1NzcyNjY5MDUxMTgud2VicHwwYzI1YTM2ZTU1ZTI1N2NiNzI2ZWFlNzgwYjlkNDE2MzhhNzdjNTQ4NGZhZWU1NzIxZThkMzRjZmVmZThiOTU5",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "6000111692",
+          "objectID": "8827795374081",
+          "pk": 8827795374081,
+          "name_text_es_mx": "Varilla Corrugada Grado 42 De 3/8” 9.15 M, Kilogramos",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-corrugada-grado-42-de-38-915-m-kilogramos/p/6000111692",
+          "OSS7_priceValue_mxn_double": 145.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3wxMjk0OHxpbWFnZS93ZWJwfGltYWdlcy9oNDUvaDA4Lzk1NzcyNjcxMDE3MjYud2VicHxmNjY1M2E1ZWE5MGFmZjc4ZmYyZjUwODgwZjFjNWZmMDExNWI0M2FlMmE5NzE3MzA1Y2Y5YTlhZDc3N2JmYmNm",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "0204000086",
+          "objectID": "8799761301505",
+          "pk": 8799761301505,
+          "name_text_es_mx": "Truper, Amarrador De Varillas Con Grip, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/truper-amarrador-de-varillas-con-grip-pieza/p/0204000086",
+          "OSS7_priceValue_mxn_double": 125.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "TRUPER",
+            "brands"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3w0MTU0fGltYWdlL3dlYnB8aW1hZ2VzL2g1OC9oNDQvOTI3MzMwNzI2NzEwMi53ZWJwfGZmNGFmYTE2YTE1NzA4YTEzN2EwYzhhNTNhMGNjMDY5MDk3YWVkY2Y4NDkwYWI2MTMyYTVhMTEwMGQzN2MwMzM",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "0204000083",
+          "objectID": "8799761104897",
+          "pk": 8799761104897,
+          "name_text_es_mx": "Varilla 5/8\" 12 m, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-58-12-m-pieza/p/0204000083",
+          "OSS7_priceValue_mxn_double": 450.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3wyMzEwfGltYWdlL3dlYnB8aW1hZ2VzL2hjZS9oYTEvOTI3MzMwNjQ4MDY3MC53ZWJwfDQ2MmFkYjQzNWJiZjQwYTQxMjNkOGU4NWFiOTYyZGE4MTliNjI3YjhmNDMzZGNlOGM3ZjE3NGJjY2NiZmI2YmI",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "0204000068",
+          "objectID": "8799760089089",
+          "pk": 8799760089089,
+          "name_text_es_mx": "Varilla 3/8\" 12 m, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-38-12-m-pieza/p/0204000068",
+          "OSS7_priceValue_mxn_double": 160.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3wyMzEwfGltYWdlL3dlYnB8aW1hZ2VzL2g1MS9oYjYvOTI3MzMwMzE3MTEwMi53ZWJwfDNiOGMyN2M2NWM0MWQwMTIxNDgxOTA2NGRiYmNkMzE5ZDAxYjRlYmNlMjAzYzhmNTk4MzU5NWEzN2RmNDhhYmY",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "0204000065",
+          "objectID": "8799759826945",
+          "pk": 8799759826945,
+          "name_text_es_mx": "Varilla 3/4\" 12 m, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-34-12-m-pieza/p/0204000065",
+          "OSS7_priceValue_mxn_double": 568.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3wyMzEwfGltYWdlL3dlYnB8aW1hZ2VzL2g1OC9oNjAvOTI3MzMwMzU2NDMxOC53ZWJwfDY0ODczZmFmODAyYjNiODI3NjE3ODI1NWE4MzM1YjM4MjIwNGY0OGQ0NjdmZWFjZTJiYjE3NjY3MDFhNWU4NzU",
+          "volumePrices_mxn_boolean": false
+        },
+        {
+          "catalogVersion": "Online",
+          "code_string": "0204000061",
+          "objectID": "8799759728641",
+          "pk": 8799759728641,
+          "name_text_es_mx": "Varilla 1/2\" 12 m, Pieza",
+          "url_es_mx_string": "/catalogo/aceros/varilla/varilla/varilla-12-12-m-pieza/p/0204000061",
+          "OSS7_priceValue_mxn_double": 288.0,
+          "priceValue_mxn_double": 0.0,
+          "brand_string_mv": [
+            "brands",
+            "GENÉRICO"
+          ],
+          "inStockFlag_boolean": false,
+          "stockLevelStatus_string": "outOfStock",
+          "availabilityDescription_OSS7": "72 hrs",
+          "img-300Wx300H_string": "/medias/?context=bWFzdGVyfGltYWdlc3w3MTk2fGltYWdlL3dlYnB8aW1hZ2VzL2gzOS9oYTEvOTQ2NDUxNjUwOTcyNi53ZWJwfDZiNmZhMTAyZjNiZTU2MjhjM2U5Y2IwZGNlODJlZThjOTYyNmEyM2QwOTgyYTFkMWY0ODMzOTM2YjMyNjZhMjQ",
+          "volumePrices_mxn_boolean": false
+        }
+      ],
+      "nbHits": 7,
+      "page": 0,
+      "nbPages": 1,
+      "hitsPerPage": 10
+    }
+  ]
+}

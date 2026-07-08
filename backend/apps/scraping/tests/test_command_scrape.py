@@ -119,9 +119,7 @@ def hd_setup(db):
         state="NL",
     )
     zone = Zone.objects.create(name="Monterrey Metro", slug="monterrey-metro", state="NL")
-    ZoneLocationMap.objects.create(
-        zone=zone, retailer_location=location, is_primary=True
-    )
+    ZoneLocationMap.objects.create(zone=zone, retailer_location=location, is_primary=True)
     return {"retailer": retailer, "location": location, "zone": zone}
 
 
@@ -216,31 +214,34 @@ def test_sin_location_primaria_command_error(db):
         call_command("scrape", retailer=retailer.slug, zone="monterrey-metro")
 
 
-# --- (4) slug sin adapter (construrama) => aviso, sin stacktrace -------------
+# --- (4) slug sin adapter (retailer futuro) => aviso, sin stacktrace ---------
 @pytest.mark.django_db
 def test_slug_sin_adapter_avisa_sin_reventar(db):
-    """Construrama (sin adapter aún) => mensaje 'no disponible aún', sin reventar."""
+    """Un retailer sembrado pero SIN adapter (aún) => 'no disponible aún', sin reventar.
+
+    Home Depot (F025) y Construrama (F026) ya tienen adapter; este caso usa un
+    retailer futuro/hipotético (sin entrada en INGEST_REGISTRY) para ejercer la
+    rama de 'adapter no disponible aún' sin stacktrace.
+    """
     retailer = Retailer.objects.create(
-        name="Construrama",
-        slug="construrama",
-        base_url="https://www.construrama.com",
+        name="Ferretería Futura",
+        slug="ferre-futura",
+        base_url="https://www.ferre-futura.example",
         pricing_model=Retailer.PricingModel.DISTRIBUTOR_SUBPATH,
     )
     location = RetailerLocation.objects.create(
         retailer=retailer,
-        external_id="distribuidor-mty",
-        name="Construrama MTY",
+        external_id="sucursal-mty",
+        name="Ferretería Futura MTY",
         city="Monterrey",
         state="NL",
     )
     zone = Zone.objects.create(name="Monterrey Metro", slug="monterrey-metro", state="NL")
-    ZoneLocationMap.objects.create(
-        zone=zone, retailer_location=location, is_primary=True
-    )
+    ZoneLocationMap.objects.create(zone=zone, retailer_location=location, is_primary=True)
     out = StringIO()
 
     # No revienta (no levanta excepción) y avisa.
-    call_command("scrape", retailer="construrama", zone="monterrey-metro", stdout=out)
+    call_command("scrape", retailer="ferre-futura", zone="monterrey-metro", stdout=out)
 
     assert "no disponible aún" in out.getvalue()
     # No ejecutó ninguna corrida.

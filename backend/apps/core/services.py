@@ -155,12 +155,24 @@ def seed_demo() -> dict[str, int]:
         external_id="distribuidor-mty-centro",
         defaults={
             "name": "Construrama Materiales del Norte",
-            "subpath": "/distribuidores/mty-centro",
+            "subpath": "/nuevo-leon",
             "address": "Av. Colón 500, Centro",
             "city": "Monterrey",
             "state": "NL",
             "lat": Decimal("25.686600"),
             "lng": Decimal("-100.316100"),
+            # F026: params de routing/precio de Construrama (recon §1-§2). El
+            # subpath de la URL de catálogo es el ESTADO (`nuevo-leon`); el precio
+            # de la zona vive en el índice Algolia `construrama_mx` bajo el prefijo
+            # del store activo (`currentStore=OSS7` de `get/algolia`). App ID e
+            # índice son públicos; la search key NO se siembra (va por env).
+            "extra": {
+                "subpath": "nuevo-leon",
+                "current_store": "OSS7",
+                "place_id": "ChIJ9fg3tDGVYoYRlJjIasrT06M",
+                "algolia_app_id": "NJVY3EU5DW",
+                "algolia_index": "construrama_mx",
+            },
         },
     )
 
@@ -174,11 +186,16 @@ def seed_demo() -> dict[str, int]:
             "centroid_lng": Decimal("-100.297300"),
         },
     )
+    # `is_primary` es POR retailer: marca la ubicación primaria de ESE retailer
+    # que sirve la zona (lo consume el resolver del comando `scrape`, que filtra
+    # por retailer, y el Admin). La búsqueda de precios NO depende de un único
+    # primario por zona. Ambos retailers tienen su primaria en Monterrey Metro
+    # para que `scrape --retailer {home-depot|construrama}` resuelva su tienda.
     ZoneLocationMap.objects.update_or_create(
         zone=zona, retailer_location=hd_loc, defaults={"is_primary": True}
     )
     ZoneLocationMap.objects.update_or_create(
-        zone=zona, retailer_location=cr_loc, defaults={"is_primary": False}
+        zone=zona, retailer_location=cr_loc, defaults={"is_primary": True}
     )
 
     # Categoría piloto.
@@ -215,9 +232,7 @@ def seed_demo() -> dict[str, int]:
             for captura in _CAPTURAS:
                 # Historial multiplicativo: base × factor, cuantizado a 2dp. La
                 # ultima captura (×1.030) es la mas reciente y la mas alta.
-                precio = (base * captura["factor"]).quantize(
-                    _CENTAVOS, rounding=ROUND_HALF_UP
-                )
+                precio = (base * captura["factor"]).quantize(_CENTAVOS, rounding=ROUND_HALF_UP)
                 # Clave natural: (retailer_product, zona, captured_at) -> sin duplicar.
                 _, creada = PriceObservation.objects.update_or_create(
                     retailer_product=rp,

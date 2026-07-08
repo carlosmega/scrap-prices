@@ -16,6 +16,15 @@ from apps.geo.models import RetailerLocation, Zone
 from apps.scraping import services
 
 
+def _resumen_corrida(run) -> dict:
+    """Resumen serializable de una corrida para el result backend de Celery."""
+    return {
+        "scrape_run_id": str(run.pk),
+        "status": run.status,
+        "items_found": run.items_found,
+    }
+
+
 @shared_task(name="scraping.scrape_retailer_zone")
 def scrape_retailer_zone(zone_id: str, location_id: str, category: str) -> dict:
     """Corre la ingestión de Home Depot para una zona/tienda y categoría.
@@ -27,8 +36,18 @@ def scrape_retailer_zone(zone_id: str, location_id: str, category: str) -> dict:
     zone = Zone.objects.get(pk=zone_id)
     location = RetailerLocation.objects.select_related("retailer").get(pk=location_id)
     run = services.ingest_homedepot(zone, location, category)
-    return {
-        "scrape_run_id": str(run.pk),
-        "status": run.status,
-        "items_found": run.items_found,
-    }
+    return _resumen_corrida(run)
+
+
+@shared_task(name="scraping.scrape_construrama_zone")
+def scrape_construrama_zone(zone_id: str, location_id: str, category: str) -> dict:
+    """Corre la ingestión de Construrama (Algolia) para una zona/tienda y categoría.
+
+    Espeja `scrape_retailer_zone` pero delega en `ingest_construrama` (F026).
+    Resuelve entidades por id y devuelve el resumen serializable de la corrida; el
+    stop-if-blocked y el cierre del `ScrapeRun` los maneja el service.
+    """
+    zone = Zone.objects.get(pk=zone_id)
+    location = RetailerLocation.objects.select_related("retailer").get(pk=location_id)
+    run = services.ingest_construrama(zone, location, category)
+    return _resumen_corrida(run)

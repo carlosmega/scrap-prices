@@ -53,19 +53,21 @@ Body (multi-query InstantSearch):
 ```
 Respuesta (Algolia estándar): `{ "results":[ { "hits":[ {...} ], "nbHits", "page", "nbPages" } ] }`.
 
-**Campos de `hits[]` a confirmar con la 2ª captura** (el body no estaba en el 1er HAR):
-| Dato en `RawProduct`/`RawPrice` | Campo Algolia esperado | Estado |
+**Campos de `hits[]` — CONFIRMADOS por probe en vivo (2026-07-07, 7 hits de "varilla" en store OSS7):**
+| Dato en `RawProduct`/`RawPrice` | Campo Algolia | Notas |
 | --- | --- | --- |
-| `price` | `OSS7_priceValue_mxn_double` (MXN, double) | confirmado (filtro request); confirmar en `hit` |
-| `external_sku` | `objectID` y/o `productCode` (10 díg., ej. `6000111693`) | confirmar nombre exacto |
-| `raw_name` | nombre del producto | confirmar nombre de campo |
-| `url` (PDP) | slug/URL del `hit` (`/p/{productCode}`) | confirmar |
-| `unit_raw` | unidad (recon vio "kilogramos" en slug) | confirmar |
-| `brand` | atributo de marca (puede no existir) | confirmar |
-| specs matching | diámetro/calibre, grado (R42), longitud | confirmar facets |
+| `price` | `OSS7_priceValue_mxn_double` (Number, MXN) | precio de la zona OSS7. `priceValue_mxn_double` base = 0.0 → **ignorar** |
+| `external_sku` | `code_string` (10 díg., ej. `"6000111693"`); `objectID`/`pk` de respaldo | |
+| `raw_name` | `name_text_es_mx` (ej. `"Varilla Corrugada Grado 42 De 1/2” 9.15 M, Kilogramos"`) | |
+| `url` | `https://www.construrama.com` + `url_es_mx_string` (relativa `/catalogo/.../p/{code}`) | |
+| `brand` | `brand_string_mv` (array; **filtrar el token literal `"brands"`** → `"GENÉRICO"`/`"TRUPER"`) | |
+| `is_available` | `inStockFlag_boolean` (hoy todos `false`); `stockLevelStatus_string`, `availabilityDescription_OSS7` (`"72 hrs"`) como extra | |
+| `unit_raw` / `sale_unit` | **inferir del nombre**: `"Kilogramos"` → kg, `"Pieza"` → pieza (F031) | grado-42 9.15m por kg; lisas 12m por pieza |
+| specs matching | del nombre: diámetro (`1/2"`,`3/8"`,`5/8"`,`3/4"`), grado (`42`/R42), largo (`9.15m`/`12m`) | Algolia no trae facets limpios de diámetro → parsear del nombre |
 
-> El prefijo `OSS7` podría ser específico de zona/lista de precios (§2.1 recon):
-> confirmar si cambia al elegir otra ciudad; si sí, leerlo de `get/algolia`, no hardcodear.
+Meta de la respuesta: `results[0].{ hits[], nbHits, page, nbPages, hitsPerPage }`.
+Confirmado: `currentStore=OSS7` (de `get/algolia`) es el prefijo de precio de Nuevo León/Monterrey.
+**Ojo:** "varilla" también devuelve accesorios (ej. `"amarrador de varillas"`, pieza) → el matching **manual** en Admin decide cuáles mapean a canónicos de varilla.
 
 ## Criterios de aceptación
 
@@ -105,11 +107,16 @@ Luego: matchear los SKUs reales de Construrama a los canónicos en Admin y confi
 ## Notas y decisiones abiertas
 
 - **ToS: APROBADO 2026-07-07** (humano). Levanta el `paused` del recon §0.
-- **Insumo requerido (bloqueante para el parser):** 2ª captura **HAR "Save with content"**
-  en `docs/recon/har/` (gitignored) que guarde el **body de la respuesta de Algolia**
-  (índice `construrama_mx`), y —deseable— `setStoresByCity` (store-id del distribuidor)
-  y `get/algolia` (App ID + search key + prefijo `OSS7` por zona). Sin el body no se
-  cierran los nombres de campos de `hits[]`.
+- **Insumo requerido: RESUELTO (2026-07-07).** El HAR no guardó el body de Algolia
+  (limitación de Chrome con XHR grandes), así que se hizo **UNA consulta respetuosa
+  en vivo** a Algolia con la search key pública de `get/algolia` (App ID `NJVY3EU5DW`,
+  índice `construrama_mx`, store `OSS7`, UA honesto, sin evasión). Respuesta cruda
+  (7 hits reales) preservada en `docs/recon/har/algolia_varilla_response.json`
+  (gitignored) → **fuente de los golden fixtures**.
+- **Manejo de la search key:** es pública (search-only) pero **NO se commitea**. El
+  adapter la lee de env (`CONSTRURAMA_ALGOLIA_SEARCH_KEY`) o de `get/algolia`; los
+  tests son **offline** (MockTransport) y no la requieren. El fixture committeable en
+  `backend/` debe ser sanitizado (solo `results[0].hits[]` de catálogo, sin headers/keys).
 - **Riesgo técnico (recon §5):** Imperva. Plan A = Algolia directo (evita el host).
   Si en corrida real la search key está restringida por Referer/allowedSources o
   responde bloqueo → **NO forzar**; escalar a Plan B (Playwright) como feature aparte,

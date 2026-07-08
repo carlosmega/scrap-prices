@@ -69,9 +69,17 @@ def test_seed_crea_el_grafo_de_la_spec():
     assert zona.centroid_lat is not None
     assert zona.centroid_lng is not None
 
-    # ZoneLocationMap une la zona con cada location; exactamente una primaria.
+    # ZoneLocationMap une la zona con cada location; una primaria POR retailer
+    # (la consume el resolver del comando `scrape`, que filtra por retailer; la
+    # búsqueda de precios no depende de un único primario por zona).
     assert ZoneLocationMap.objects.filter(zone=zona).count() == RetailerLocation.objects.count()
-    assert ZoneLocationMap.objects.filter(zone=zona, is_primary=True).count() == 1
+    for retailer in (hd, cr):
+        assert (
+            ZoneLocationMap.objects.filter(
+                zone=zona, is_primary=True, retailer_location__retailer=retailer
+            ).count()
+            == 1
+        )
 
     # Categoría "Varilla".
     cat = Category.objects.get(slug="varilla")
@@ -90,9 +98,10 @@ def test_seed_crea_el_grafo_de_la_spec():
 
     # RetailerProduct por (canónico x retailer), matcheado manual.
     assert RetailerProduct.objects.count() == canonicos.count() * 2
-    assert RetailerProduct.objects.filter(
-        match_status=RetailerProduct.MatchStatus.MANUAL
-    ).count() == RetailerProduct.objects.count()
+    assert (
+        RetailerProduct.objects.filter(match_status=RetailerProduct.MatchStatus.MANUAL).count()
+        == RetailerProduct.objects.count()
+    )
     for rp in RetailerProduct.objects.all():
         assert rp.canonical_product is not None
         assert rp.external_sku

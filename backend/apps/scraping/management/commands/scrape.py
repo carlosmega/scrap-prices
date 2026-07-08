@@ -30,17 +30,19 @@ from django.core.management.base import BaseCommand, CommandError
 from apps.geo.models import Retailer, RetailerLocation, Zone, ZoneLocationMap
 from apps.scraping import services
 from apps.scraping.base import BaseRetailerAdapter, RawPrice
-from apps.scraping.exceptions import RetailerBlockedError
+from apps.scraping.construrama import ConstruramaAdapter
+from apps.scraping.exceptions import RetailerBlockedError, ScrapeError
 from apps.scraping.homedepot import HomeDepotAdapter
 
 # Cuántos productos se listan en la salida legible (resumen, no volcado completo).
 PREVIEW_LIMIT = 10
 
-# Registro de adapters: retailer-slug -> función de ingestión (F025). Añadir un
-# retailer (p.ej. Construrama en F026) es agregar una entrada aquí, sin tocar el
-# flujo del comando. Un slug ausente => "adapter no disponible aún" (sin reventar).
+# Registro de adapters: retailer-slug -> función de ingestión (F025/F026). Añadir
+# un retailer es agregar una entrada aquí (y su rama en `build_adapter`), sin tocar
+# el flujo del comando. Un slug ausente => "adapter no disponible aún" (sin reventar).
 INGEST_REGISTRY: dict[str, Callable[..., object]] = {
     "home-depot": services.ingest_homedepot,
+    "construrama": services.ingest_construrama,
 }
 
 
@@ -53,6 +55,8 @@ def build_adapter(slug: str) -> BaseRetailerAdapter:
     """
     if slug == "home-depot":
         return HomeDepotAdapter()
+    if slug == "construrama":
+        return ConstruramaAdapter()
     raise CommandError(f"No hay adapter construible para el retailer '{slug}'.")
 
 
@@ -140,9 +144,7 @@ class Command(BaseCommand):
                 "Revisa los slugs sembrados (p.ej. corre `manage.py seed`)."
             ) from exc
 
-    def _resolver_primary_location(
-        self, retailer: Retailer, zone: Zone
-    ) -> RetailerLocation:
+    def _resolver_primary_location(self, retailer: Retailer, zone: Zone) -> RetailerLocation:
         """Devuelve la `RetailerLocation` primaria del retailer que sirve la zona.
 
         La sirve el `ZoneLocationMap` con `is_primary=True` cuya ubicación es del
@@ -185,6 +187,8 @@ class Command(BaseCommand):
             precios = adapter.fetch_products_with_prices(category, location)
         except RetailerBlockedError as exc:
             self._reportar_bloqueo(exc)
+        except ScrapeError as exc:
+            self._reportar_scrape_error(exc)
         finally:
             self._cerrar_adapter(adapter)
 
@@ -204,15 +208,14 @@ class Command(BaseCommand):
             run = ingest(zone, location, category, adapter=adapter)
         except RetailerBlockedError as exc:
             self._reportar_bloqueo(exc)
+        except ScrapeError as exc:
+            self._reportar_scrape_error(exc)
         finally:
             self._cerrar_adapter(adapter)
 
         estilo = self.style.SUCCESS if run.status == "ok" else self.style.WARNING
         self.stdout.write(
-            estilo(
-                f"Corrida {run.status}: {run.items_found} items "
-                f"(ScrapeRun {run.pk})."
-            )
+            estilo(f"Corrida {run.status}: {run.items_found} items (ScrapeRun {run.pk}).")
         )
         if run.errors:
             self.stdout.write(self.style.WARNING(f"Errores: {len(run.errors)}"))
@@ -237,6 +240,15 @@ class Command(BaseCommand):
             f"Retailer bloqueó la corrida (status {exc.status_code}): {exc}. "
             "stop-if-blocked: nos detenemos sin reintentar ni evadir."
         )
+
+    def _reportar_scrape_error(self, exc: ScrapeError) -> None:
+        """Detiene la corrida por un error de fetch (p.ej. falta la search key).
+
+        Es un STOP limpio del guardrail (no un bug de mapeo): el mapeo de la zona
+        ya se resolvió antes de llegar aquí. Se surface como `CommandError` con el
+        motivo, sin stacktrace.
+        """
+        raise CommandError(f"No se pudo completar el fetch del retailer (guardrail): {exc}")
 
     def _cerrar_adapter(self, adapter: BaseRetailerAdapter) -> None:
         cerrar = getattr(adapter, "close", None)

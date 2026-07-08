@@ -89,14 +89,10 @@ class PoliteClient:
     ) -> None:
         self.user_agent = user_agent or settings.SCRAPER_USER_AGENT
         self.min_delay_seconds = (
-            settings.SCRAPER_MIN_DELAY_SECONDS
-            if min_delay_seconds is None
-            else min_delay_seconds
+            settings.SCRAPER_MIN_DELAY_SECONDS if min_delay_seconds is None else min_delay_seconds
         )
         self.timeout_seconds = (
-            settings.SCRAPER_TIMEOUT_SECONDS
-            if timeout_seconds is None
-            else timeout_seconds
+            settings.SCRAPER_TIMEOUT_SECONDS if timeout_seconds is None else timeout_seconds
         )
         concurrency = (
             settings.SCRAPER_MAX_CONCURRENCY_PER_DOMAIN
@@ -104,9 +100,7 @@ class PoliteClient:
             else max_concurrency_per_domain
         )
         self.max_concurrency_per_domain = max(1, concurrency)
-        self.max_retries = (
-            settings.SCRAPER_MAX_RETRIES if max_retries is None else max_retries
-        )
+        self.max_retries = settings.SCRAPER_MAX_RETRIES if max_retries is None else max_retries
         # `sleep`/`monotonic` inyectables: en tests se sustituyen por un reloj
         # falso para verificar el delay sin esperar en tiempo real.
         self._sleep = sleep
@@ -187,6 +181,20 @@ class PoliteClient:
         - Ante 403/429/challenge lanza `RetailerBlockedError` y se detiene: no
           reintenta, no rota UA/identidad, no resuelve captcha, no evade.
         """
+        return self._send("GET", url, **kwargs)
+
+    def post(self, url: str, **kwargs: object) -> httpx.Response:
+        """POST cortés a `url` con las MISMAS garantías que `get`.
+
+        Necesario para APIs que solo aceptan POST (p.ej. la Query API de Algolia
+        de Construrama, F026: el cuerpo de la búsqueda viaja como JSON). Aplica
+        idéntica cortesía (rate-limit por dominio), reintentos de transitorios y
+        stop-if-blocked; ni el método POST relaja ningún guardrail.
+        """
+        return self._send("POST", url, **kwargs)
+
+    def _send(self, method: str, url: str, **kwargs: object) -> httpx.Response:
+        """Núcleo común de `get`/`post`: rate-limit + reintentos + stop-if-blocked."""
         domain = urlsplit(url).netloc
         semaphore = self._semaphore_for(domain)
 
@@ -194,12 +202,12 @@ class PoliteClient:
             for attempt in self._retrying():
                 with attempt:
                     self._wait_for_domain(domain)
-                    return self._do_get(url, **kwargs)
+                    return self._do_request(method, url, **kwargs)
         raise AssertionError("unreachable")  # pragma: no cover
 
-    def _do_get(self, url: str, **kwargs: object) -> httpx.Response:
+    def _do_request(self, method: str, url: str, **kwargs: object) -> httpx.Response:
         try:
-            response = self._client.get(url, **kwargs)
+            response = self._client.request(method, url, **kwargs)
         except httpx.TimeoutException as exc:
             # Timeout: transitorio → se reintenta con backoff.
             raise TransientScrapeError(f"Timeout pidiendo {url}: {exc}") from exc
@@ -226,9 +234,7 @@ class PoliteClient:
             )
         if status >= 500:
             # 5xx: transitorio del servidor → se reintenta con backoff.
-            raise TransientScrapeError(
-                f"Error transitorio {status} en {response.request.url}"
-            )
+            raise TransientScrapeError(f"Error transitorio {status} en {response.request.url}")
         # 4xx que no sea bloqueo (404, 400, ...) no se reintenta: es un error
         # legítimo de la petición. Se devuelve para que el adapter lo maneje.
 

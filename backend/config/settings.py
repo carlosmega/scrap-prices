@@ -37,6 +37,16 @@ env = environ.Env(
     # Reintentos para errores TRANSITORIOS (timeout/5xx/red). NO aplica a
     # bloqueos 403/429: ante bloqueo se detiene, no se reintenta (§2.3).
     SCRAPER_MAX_RETRIES=(int, 3),
+    # --- Construrama / Algolia (F026) --------------------------------------
+    # El precio de Construrama se sirve por Algolia (índice construrama_mx,
+    # campo OSS7_priceValue_mxn_double). El App ID y el índice son PÚBLICOS
+    # (viajan en el host/bundle del front), por eso llevan default. La search
+    # key (search-only, pública) NO se hardcodea ni se commitea: default vacío;
+    # se inyecta por env (o se re-obtiene de `get/algolia`). Los tests son
+    # offline (MockTransport) y no la requieren.
+    CONSTRURAMA_ALGOLIA_APP_ID=(str, "NJVY3EU5DW"),
+    CONSTRURAMA_ALGOLIA_INDEX=(str, "construrama_mx"),
+    CONSTRURAMA_ALGOLIA_SEARCH_KEY=(str, ""),
 )
 
 # Lee un .env de la raíz del backend si existe (no requerido).
@@ -150,3 +160,11 @@ SCRAPER_MIN_DELAY_SECONDS = env.float("SCRAPER_MIN_DELAY_SECONDS")
 SCRAPER_TIMEOUT_SECONDS = env.float("SCRAPER_TIMEOUT_SECONDS")
 SCRAPER_MAX_CONCURRENCY_PER_DOMAIN = env.int("SCRAPER_MAX_CONCURRENCY_PER_DOMAIN")
 SCRAPER_MAX_RETRIES = env.int("SCRAPER_MAX_RETRIES")
+
+# --- Construrama / Algolia (F026) -------------------------------------------
+# App ID e índice son públicos (default). La search key es pública (search-only)
+# pero NO se commitea: se lee de env (default vacío) o se re-obtiene de
+# `get/algolia`. Sin key, el adapter no hace la petición real (falla claro).
+CONSTRURAMA_ALGOLIA_APP_ID = env("CONSTRURAMA_ALGOLIA_APP_ID")
+CONSTRURAMA_ALGOLIA_INDEX = env("CONSTRURAMA_ALGOLIA_INDEX")
+CONSTRURAMA_ALGOLIA_SEARCH_KEY = env("CONSTRURAMA_ALGOLIA_SEARCH_KEY")
