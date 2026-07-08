@@ -222,5 +222,12 @@
     "capas": ["backend", "frontend", "e2e"],
     "spec": "specs/F033-busqueda-en-vivo.md",
     "status": "done"
+  },
+  {
+    "id": "F034",
+    "titulo": "Fix: URL de ficha de Home Depot usa seo.href real (no /p/{sku} que da 404); fallback a /search; refresh en re-ingestion",
+    "capas": ["backend"],
+    "spec": "specs/F034-fix-url-homedepot.md",
+    "status": "in_progress"
   }
 ]
