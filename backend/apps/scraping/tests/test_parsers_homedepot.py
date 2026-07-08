@@ -16,6 +16,7 @@ import pytest
 
 from apps.scraping.parsers import (
     HOMEDEPOT_SOURCE,
+    homedepot_href,
     homedepot_sale_unit,
     homedepot_unit,
     parse_homedepot,
@@ -49,9 +50,7 @@ def test_parse_varilla_precio_decimal_sku_unidad():
 def test_parse_varilla_prices_precio_y_disponibilidad():
     """`parse_homedepot_prices` da precio Decimal y disponibilidad por tienda."""
     payload = _load("homedepot_varilla_482588.json")
-    precios = parse_homedepot_prices(
-        payload, store_id=STORE_ID, captured_at=CAPTURED_AT
-    )
+    precios = parse_homedepot_prices(payload, store_id=STORE_ID, captured_at=CAPTURED_AT)
 
     assert len(precios) == 1
     precio = precios[0]
@@ -76,9 +75,7 @@ def test_parse_disponibilidad_cae_a_inventario_total_si_no_hay_tienda():
 def test_parse_batch_devuelve_todos_los_productos_con_precio():
     """Un batch de 4 SKUs: todos traen precio Decimal > 0 y sku."""
     payload = _load("homedepot_varilla_batch.json")
-    precios = parse_homedepot_prices(
-        payload, store_id=STORE_ID, captured_at=CAPTURED_AT
-    )
+    precios = parse_homedepot_prices(payload, store_id=STORE_ID, captured_at=CAPTURED_AT)
 
     assert len(precios) == 4
     skus = {p.sku for p in precios}
@@ -93,9 +90,7 @@ def test_parse_omite_supersku_sin_precio_fiable():
     payload = _load("homedepot_supersku_empty.json")
 
     productos = parse_homedepot(payload, store_id=STORE_ID)
-    precios = parse_homedepot_prices(
-        payload, store_id=STORE_ID, captured_at=CAPTURED_AT
-    )
+    precios = parse_homedepot_prices(payload, store_id=STORE_ID, captured_at=CAPTURED_AT)
 
     # No se inventa precio: el padre SuperSKU no produce ni producto ni precio.
     assert productos == []
@@ -127,3 +122,54 @@ def test_parse_payload_vacio_no_revienta():
 def test_homedepot_sale_unit_mapea_codigo_unece(code, esperado):
     """El código UN/ECE de HD se mapea a SaleUnit; desconocido → ''."""
     assert homedepot_sale_unit(code) == esperado
+
+
+# --- F034: URL de la ficha (seo.href real, no /p/{sku}) ----------------------
+
+
+def test_parse_homedepot_extrae_seo_href_a_url():
+    """`parse_homedepot` pone en `RawProduct.url` el `seo.href` real (relativo)."""
+    payload = _load("homedepot_varilla_482588.json")
+    productos = parse_homedepot(payload, store_id=STORE_ID)
+
+    assert len(productos) == 1
+    # El slug REAL del content, no el `/p/{sku}` adivinado (que da 404).
+    assert productos[0].url == "/p/varilla-corrugada-recta-r-42-1-12-metros-1-tonelada-482588"
+    assert productos[0].url != "/p/482588"
+
+
+def test_parse_homedepot_sin_seo_deja_url_vacia():
+    """Sin `seo` en el content, `RawProduct.url` queda "" (la ingestión hará fallback)."""
+    payload = _load("homedepot_varilla_batch.json")
+    productos = parse_homedepot(payload, store_id=STORE_ID)
+
+    assert len(productos) == 4
+    assert all(prod.url == "" for prod in productos)
+
+
+@pytest.mark.parametrize(
+    ("content", "esperado"),
+    [
+        # href relativo normal → se devuelve tal cual.
+        (
+            {"seo": {"href": "/p/uniblock-cemento-gris-34758-109754"}},
+            "/p/uniblock-cemento-gris-34758-109754",
+        ),
+        # se sanea el espaciado alrededor del href.
+        ({"seo": {"href": "  /p/algo-123  "}}, "/p/algo-123"),
+        # sin `seo` → "" (fallback aguas abajo).
+        ({}, ""),
+        # `seo` presente pero sin `href` → "".
+        ({"seo": {}}, ""),
+        # href vacío → "".
+        ({"seo": {"href": ""}}, ""),
+        # `seo` no es dict (robustez) → "".
+        ({"seo": "/p/algo"}, ""),
+        # href que no empieza con "/" (mal formado / absoluto) → "" (fallback).
+        ({"seo": {"href": "https://www.homedepot.com.mx/p/algo"}}, ""),
+        ({"seo": {"href": "p/algo-sin-slash"}}, ""),
+    ],
+)
+def test_homedepot_href_extrae_href_relativo_validado(content, esperado):
+    """`homedepot_href` devuelve el href relativo saneado o "" si falta/mal formado."""
+    assert homedepot_href(content) == esperado

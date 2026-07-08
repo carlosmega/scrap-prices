@@ -27,12 +27,16 @@ class RawProduct:
     `sku` y `raw_name` son los identificadores del retailer (no del catálogo
     interno); la normalización a `RetailerProduct`/`Product` ocurre aguas abajo.
     `raw_payload` conserva el objeto crudo para auditabilidad (guardrail §2.3).
+    `url` es el href RELATIVO de la ficha (PDP) tal como lo expone el retailer
+    (F034: HD lo trae en `seo.href`); "" si el payload no lo incluye. La URL
+    absoluta la reconstruye la ingestión anteponiendo el host del retailer.
     """
 
     sku: str
     raw_name: str
     source: str
     raw_payload: dict = field(default_factory=dict)
+    url: str = ""
 
 
 @dataclass(frozen=True, slots=True)
@@ -77,15 +81,11 @@ class BaseRetailerAdapter(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def list_products(
-        self, category: str, location: RetailerLocation | Zone
-    ) -> list[RawProduct]:
+    def list_products(self, category: str, location: RetailerLocation | Zone) -> list[RawProduct]:
         """Lista los productos de una categoría para una ubicación."""
         raise NotImplementedError
 
     @abstractmethod
-    def get_price(
-        self, product: RawProduct, location: RetailerLocation | Zone
-    ) -> RawPrice:
+    def get_price(self, product: RawProduct, location: RetailerLocation | Zone) -> RawPrice:
         """Obtiene el precio de un producto en una ubicación."""
         raise NotImplementedError

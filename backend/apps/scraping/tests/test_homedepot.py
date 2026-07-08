@@ -26,7 +26,7 @@ from apps.prices.models import PriceObservation, ScrapeRun
 from apps.scraping import services
 from apps.scraping.client import PoliteClient
 from apps.scraping.exceptions import RetailerBlockedError
-from apps.scraping.homedepot import HomeDepotAdapter
+from apps.scraping.homedepot import HOMEDEPOT_BASE_URL, HomeDepotAdapter
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -225,12 +225,8 @@ def test_ingest_dos_veces_no_duplica_retailer_product(hd_setup):
     adapter1 = _make_adapter(_ok_handler("homedepot_varilla_batch.json"))
     adapter2 = _make_adapter(_ok_handler("homedepot_varilla_batch.json"))
 
-    services.ingest_homedepot(
-        hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter1
-    )
-    services.ingest_homedepot(
-        hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter2
-    )
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter1)
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter2)
 
     # PriceObservation es histórico: NO se deduplica (cada corrida añade lecturas).
     assert PriceObservation.objects.filter(zone=hd_setup["zone"]).count() == 8
@@ -299,11 +295,64 @@ def test_ingest_precio_decimal_exacto_de_fixture_real(hd_setup):
     """El precio ingerido es el Decimal exacto del fixture (sin float)."""
     adapter = _make_adapter(_ok_handler("homedepot_varilla_482588.json"))
 
-    services.ingest_homedepot(
-        hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter
-    )
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter)
 
     obs = PriceObservation.objects.get(retailer_product__external_sku="482588")
     assert obs.price == Decimal("20068.00")
     # inventories.18503.quantity == 0.0 ⇒ no disponible en la tienda piloto.
     assert obs.is_available is False
+
+
+# --- F034: URL de la ficha (seo.href real; fallback /search; refresh) --------
+@pytest.mark.django_db
+def test_ingest_homedepot_url_absoluta_desde_seo_href(hd_setup):
+    """La ingestión guarda la URL absoluta = host + `seo.href` real (con el slug)."""
+    adapter = _make_adapter(_ok_handler("homedepot_varilla_482588.json"))
+
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter)
+
+    rp = RetailerProduct.objects.get(external_sku="482588")
+    assert rp.url == (
+        f"{HOMEDEPOT_BASE_URL}/p/varilla-corrugada-recta-r-42-1-12-metros-1-tonelada-482588"
+    )
+    # NUNCA el `/p/{sku}` adivinado (daba 404).
+    assert rp.url != f"{HOMEDEPOT_BASE_URL}/p/482588"
+
+
+@pytest.mark.django_db
+def test_ingest_homedepot_fallback_a_search_sin_seo(hd_setup):
+    """Sin `seo.href` en el content, la URL cae al buscador `/search?q={sku}`."""
+    adapter = _make_adapter(_ok_handler("homedepot_varilla_batch.json"))
+
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter)
+
+    rps = RetailerProduct.objects.filter(retailer=hd_setup["retailer"])
+    assert rps.count() == 4
+    for rp in rps:
+        assert rp.url == f"{HOMEDEPOT_BASE_URL}/search?q={rp.external_sku}"
+        # Nunca el patrón roto `/p/{sku}`.
+        assert f"/p/{rp.external_sku}" not in rp.url
+
+
+@pytest.mark.django_db
+def test_ingest_homedepot_refresca_url_vieja_en_reingestion(hd_setup):
+    """Re-ingestar un SKU ya existente ACTUALIZA su url vieja `/p/{sku}` (404) a la buena."""
+    # Fila preexistente con la URL MALA que hoy tiene la BD del humano.
+    rp = RetailerProduct.objects.create(
+        retailer=hd_setup["retailer"],
+        external_sku="482588",
+        raw_name="Varilla vieja",
+        url=f"{HOMEDEPOT_BASE_URL}/p/482588",
+    )
+    assert rp.url == f"{HOMEDEPOT_BASE_URL}/p/482588"
+
+    adapter = _make_adapter(_ok_handler("homedepot_varilla_482588.json"))
+    services.ingest_homedepot(hd_setup["zone"], hd_setup["location"], "varilla", adapter=adapter)
+
+    rp.refresh_from_db()
+    # La re-ingestión corrigió la url a la del `seo.href` real (no /p/{sku}).
+    assert rp.url == (
+        f"{HOMEDEPOT_BASE_URL}/p/varilla-corrugada-recta-r-42-1-12-metros-1-tonelada-482588"
+    )
+    # Y no se duplicó la fila (idempotente por (retailer, external_sku)).
+    assert RetailerProduct.objects.filter(external_sku="482588").count() == 1

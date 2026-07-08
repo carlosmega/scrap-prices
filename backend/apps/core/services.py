@@ -127,6 +127,19 @@ _CRUDO_CONSTRURAMA = {
 }
 
 
+def _seed_pdp_url(slug: str, base_url: str, external_sku: str) -> str:
+    """URL de ficha demo por retailer para el seed (F034).
+
+    Home Depot NO expone `/p/{sku}` (responde 404: patrón inexistente); su
+    buscador sí halla el producto por SKU, así que la demo usa el fallback
+    `/search?q={sku}` (verificado 200) en vez de una ficha rota. Construrama sí
+    lista por `/...p/{code}` (su patrón real): se conserva su URL.
+    """
+    if slug == "home-depot":
+        return f"{base_url}/search?q={external_sku}"
+    return f"{base_url}/p/{external_sku}"
+
+
 def _sembrar_observacion_fresca(rp, zona, location, precio) -> bool:
     """Siembra/refresca la observación FRESCA (captured_at=ahora) de un RP.
 
@@ -282,7 +295,7 @@ def seed_demo() -> dict[str, int]:
                 external_sku=sku_info["external_sku"],
                 defaults={
                     "raw_name": sku_info["raw_name"],
-                    "url": f"{retailer.base_url}/p/{sku_info['external_sku']}",
+                    "url": _seed_pdp_url(slug, retailer.base_url, sku_info["external_sku"]),
                     "canonical_product": canonico,
                     "sale_unit": _SALE_UNIT_POR_RETAILER[slug],
                     "match_status": RetailerProduct.MatchStatus.MANUAL,

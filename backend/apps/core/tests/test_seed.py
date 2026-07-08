@@ -182,6 +182,23 @@ def test_seed_siembra_crudo_sin_matchear_con_observacion():
 
 
 @pytest.mark.django_db
+def test_seed_hd_no_genera_urls_p_sku():
+    """F034: los RetailerProduct demo de HD NO usan `/p/{sku}` (404); usan el buscador.
+
+    HD no expone `/p/{sku}` como ficha (patrón inexistente); la demo cae al
+    buscador `/search?q={sku}` (verificado 200) para que el enlace abra de verdad.
+    """
+    call_command("seed")
+    hd = Retailer.objects.get(slug="home-depot")
+
+    hd_rps = RetailerProduct.objects.filter(retailer=hd)
+    assert hd_rps.exists()
+    for rp in hd_rps:
+        assert f"/p/{rp.external_sku}" not in rp.url
+        assert rp.url == f"{hd.base_url}/search?q={rp.external_sku}"
+
+
+@pytest.mark.django_db
 def test_seed_es_idempotente():
     """Correr seed 2 veces no duplica filas ni cambia conteos."""
     call_command("seed")

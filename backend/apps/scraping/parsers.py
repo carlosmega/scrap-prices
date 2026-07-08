@@ -132,6 +132,9 @@ def parse_homedepot(payload: dict, *, store_id: str | None = None) -> list[RawPr
                 raw_name=str(content.get("name") or ""),
                 source=HOMEDEPOT_SOURCE,
                 raw_payload=content,
+                # F034: href relativo real del PDP (seo.href); "" si el content
+                # no lo trae (la ingestión aplica el fallback a /search?q={sku}).
+                url=homedepot_href(content),
             )
         )
     return productos
@@ -177,6 +180,25 @@ def parse_homedepot_prices(
 def homedepot_unit(content: dict) -> str:
     """Unidad de venta cruda (`x_measurements.quantityMeasure`), p.ej. C62/TN."""
     return str(content.get("x_measurements.quantityMeasure") or "")
+
+
+def homedepot_href(content: dict) -> str:
+    """Href RELATIVO del PDP de Home Depot desde `content["seo"]["href"]` (F034).
+
+    HD trae en cada `content` el slug REAL de la ficha, anidado en `seo.href`
+    (p.ej. `/p/uniblock-cemento-gris-uniblock-15kg-34758-109754`), relativo al
+    host. Se sanea (strip) y se EXIGE que empiece con "/"; si `seo` falta, no es
+    un dict, `href` está vacío o no es una ruta relativa del sitio, devuelve ""
+    (la ingestión cae entonces al buscador `/search?q={sku}`, verificado 200).
+    NUNCA se adivina `/p/{sku}`: ese patrón no existe en HD y responde 404.
+
+    Función pura (sin red/DB): testeable 1:1 contra golden fixtures.
+    """
+    seo = content.get("seo")
+    if not isinstance(seo, dict):
+        return ""
+    href = str(seo.get("href") or "").strip()
+    return href if href.startswith("/") else ""
 
 
 # Mapa código UN/ECE Recommendation 20 → `RetailerProduct.SaleUnit` (F031).

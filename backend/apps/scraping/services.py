@@ -43,6 +43,7 @@ from apps.scraping.parsers import (
     construrama_sale_unit,
     construrama_unit_raw,
     construrama_url,
+    homedepot_href,
     homedepot_sale_unit,
     homedepot_unit,
 )
@@ -108,26 +109,52 @@ def cerrar_corrida(
 # --- Ingestión Home Depot (F025) -------------------------------------------
 
 
+def _homedepot_product_url(raw_price) -> str:
+    """URL ABSOLUTA de la ficha (PDP) de Home Depot para un `RawPrice` (F034).
+
+    HD trae el slug REAL del PDP en `content["seo"]["href"]` (relativo); se le
+    antepone el host → URL absoluta que responde 200. Si falta/mal formado, se
+    cae al buscador `HOMEDEPOT_BASE_URL/search?q={sku}` (verificado 200 y el
+    buscador halla el producto por su SKU). NUNCA se usa `/p/{sku}`: ese patrón
+    no existe en HD y devuelve 404 (el bug que corrige F034).
+    """
+    href = homedepot_href(raw_price.raw_payload)
+    if href:
+        return f"{HOMEDEPOT_BASE_URL}{href}"
+    return f"{HOMEDEPOT_BASE_URL}/search?q={raw_price.sku}"
+
+
 def _get_or_create_retailer_product(retailer: Retailer, raw_price) -> RetailerProduct:
     """`get_or_create` de `RetailerProduct` por (retailer, external_sku).
 
     El matching al `CanonicalProduct` NO se hace aquí: queda `unmatched` (default
     del modelo) para curarse a mano en Admin (PRD D1). Idempotente: dos corridas
     sobre el mismo SKU no duplican la fila (clave única retailer+external_sku).
+
+    F034: la url se deriva del `seo.href` real de HD (fallback a `/search?q={sku}`),
+    nunca del `/p/{sku}` roto. En re-ingestión se REFRESCA la url de una fila ya
+    existente (get_or_create solo aplica `defaults` al crear): así una búsqueda o
+    scrape posterior corrige en sitio las filas viejas con la URL mala (404), sin
+    necesitar una data-migration one-off.
     """
     unit_raw = homedepot_unit(raw_price.raw_payload)
-    rp, _created = RetailerProduct.objects.get_or_create(
+    url = _homedepot_product_url(raw_price)
+    rp, created = RetailerProduct.objects.get_or_create(
         retailer=retailer,
         external_sku=raw_price.sku,
         defaults={
             "raw_name": raw_price.raw_name,
-            "url": f"{HOMEDEPOT_BASE_URL}/p/{raw_price.sku}",
+            "url": url,
             "unit_raw": unit_raw,
             # F031: unidad estructurada derivada del código UN/ECE de HD; "" si
             # desconocida (se cura en Admin, como el matching a canónico).
             "sale_unit": homedepot_sale_unit(unit_raw),
         },
     )
+    if not created and rp.url != url:
+        # Refresh de la url en re-ingestión: corrige la fila vieja con `/p/{sku}`.
+        rp.url = url
+        rp.save(update_fields=["url", "updated_at"])
     return rp
 
 
@@ -211,9 +238,10 @@ def ingest_homedepot(
     """Corrida de scraping de Home Depot: precios → `PriceObservation` (F025).
 
     Delega el flujo común en `_run_ingestion` con el `get_or_create_rp` de HD
-    (url `/p/{sku}`, unidad UN/ECE). Ver `_run_ingestion` para el detalle y el
-    guardrail stop-if-blocked. `search_term`/`triggered_by` auditan el origen
-    de la corrida (F033); los defaults preservan el comportamiento del comando.
+    (url del `seo.href` real con fallback a `/search?q={sku}` — F034; unidad
+    UN/ECE). Ver `_run_ingestion` para el detalle y el guardrail stop-if-blocked.
+    `search_term`/`triggered_by` auditan el origen de la corrida (F033); los
+    defaults preservan el comportamiento del comando.
     """
     adapter = adapter or HomeDepotAdapter()
     return _run_ingestion(
