@@ -211,6 +211,9 @@ def _run_ingestion(
                 retailer_product=rp,
                 zone=zone,
                 retailer_location=location,
+                # F035: liga la lectura a su corrida (y, vía su search_term, al
+                # término con que se scrapeó); común al vivo y al comando.
+                scrape_run=run,
                 price=precio.price,
                 currency=precio.currency,
                 is_available=precio.is_available,

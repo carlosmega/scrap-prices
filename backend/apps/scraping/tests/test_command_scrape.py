@@ -182,6 +182,31 @@ def test_corrida_real_crea_observations_y_run_ok(hd_setup, monkeypatch):
     assert run.items_found == 4
 
 
+# --- F035: la corrida liga cada observación a su ScrapeRun (search_term=category) --
+@pytest.mark.django_db
+def test_corrida_liga_observaciones_a_scrape_run_con_search_term(hd_setup, monkeypatch):
+    """F035: el comando estampa `--category` como `search_term` (antes null, deuda
+    de F033) y liga cada PriceObservation creada a su ScrapeRun."""
+    _patch_adapter(monkeypatch, _ok_handler("homedepot_varilla_batch.json"))
+
+    call_command(
+        "scrape",
+        retailer="home-depot",
+        zone="monterrey-metro",
+        category="impermeabilizante",
+        stdout=StringIO(),
+    )
+
+    run = ScrapeRun.objects.get(retailer=hd_setup["retailer"])
+    # El comando ahora registra el término (--category) en la corrida...
+    assert run.search_term == "impermeabilizante"
+    assert run.triggered_by == ScrapeRun.TriggeredBy.COMMAND
+    # ...y toda observación creada queda ligada a esa corrida (ninguna suelta).
+    observaciones = PriceObservation.objects.filter(zone=hd_setup["zone"])
+    assert observaciones.count() == 4
+    assert all(o.scrape_run_id == run.id for o in observaciones)
+
+
 # --- (3) retailer inexistente => CommandError -------------------------------
 @pytest.mark.django_db
 def test_retailer_inexistente_command_error(hd_setup):

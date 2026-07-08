@@ -196,9 +196,15 @@ class Command(BaseCommand):
         location: RetailerLocation,
         category: str,
     ) -> None:
-        """Corrida real: delega en la ingestión (PriceObservation + ScrapeRun)."""
+        """Corrida real: delega en la ingestión (PriceObservation + ScrapeRun).
+
+        F035: pasa `--category` como `search_term` del `ScrapeRun` (antes null,
+        deuda de F033) para que el filtro por término de la búsqueda también
+        aplique a los datos ingestados por el comando. `triggered_by` queda en su
+        default ('command').
+        """
         try:
-            run = ingest(zone, location, category, adapter=adapter)
+            run = ingest(zone, location, category, adapter=adapter, search_term=category)
         except RetailerBlockedError as exc:
             self._reportar_bloqueo(exc)
         except ScrapeError as exc:

@@ -51,6 +51,19 @@ class PriceObservation(TimeStampedUUIDModel):
         blank=True,
         related_name="observations",
     )
+    # F035: corrida que originó esta lectura. Vía `ScrapeRun.search_term` sabemos
+    # bajo qué término se scrapeó el producto, para que la búsqueda muestre los
+    # crudos que el retailer devolvió por un typo/fuzzy aunque su nombre no
+    # contenga el texto tecleado. Nullable/SET_NULL: las observaciones anteriores
+    # a F035 y las del seed quedan en null (se hallan por nombre) y borrar una
+    # corrida de auditoría no borra su histórico de precios.
+    scrape_run = models.ForeignKey(
+        "ScrapeRun",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="observations",
+    )
     price = models.DecimalField(max_digits=12, decimal_places=2)
     currency = models.CharField(max_length=3, default="MXN")
     is_available = models.BooleanField(default=True)

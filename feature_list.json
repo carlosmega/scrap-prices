@@ -235,6 +235,6 @@
     "titulo": "Fix: resultados crudos por termino scrapeado (ScrapeRun.search_term) y no solo por substring del nombre; typo/fuzzy del retailer ya no oculta lo hallado",
     "capas": ["backend"],
     "spec": "specs/F035-crudos-por-termino-scrapeado.md",
-    "status": "in_progress"
+    "status": "done"
   }
 ]

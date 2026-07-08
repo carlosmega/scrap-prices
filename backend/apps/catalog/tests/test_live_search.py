@@ -203,16 +203,23 @@ def test_termino_sin_datos_dispara_vivo_de_ambos_e_ingesta(client, seeded, monke
     # El amarrador ya sembrado NO se duplica (clave retailer+external_sku).
     assert RetailerProduct.objects.filter(external_sku="0204000086").count() == 1
 
-    # Y la MISMA respuesta ya sirve lo hallado: el crudo de HD que matchea.
+    # Y la MISMA respuesta ya sirve lo hallado. F035: los crudos se seleccionan
+    # por término scrapeado ∪ nombre, así que el vivo bajo "alambre" expone TODO
+    # lo ingestado bajo ese término (no solo los nombres que contienen "alambre").
     assert body["results"] == []  # ningún canónico se llama "alambre"
     crudos = body["raw_results"]
-    assert [c["external_sku"] for c in crudos] == ["462843"]
-    crudo = crudos[0]
+    por_sku = {c["external_sku"]: c for c in crudos}
+    # El crudo de HD cuyo nombre además contiene "alambre" está, con sus datos.
+    assert "462843" in por_sku
+    crudo = por_sku["462843"]
     assert crudo["retailer_slug"] == "home-depot"
     assert crudo["raw_name"].startswith("ALAMBRE DE ACERO RECOCIDO")
     assert crudo["price"] == 27.7
     assert crudo["currency"] == "MXN"
     assert crudo["captured_at"] is not None
+    # F035: el resto de lo scrapeado bajo "alambre" también se sirve como crudo
+    # (aunque su nombre no diga "alambre"): la respuesta ya no queda en 1 solo.
+    assert len(crudos) > 1
 
 
 # --- (2) con datos frescos (seed) NO dispara ---------------------------------
@@ -400,6 +407,25 @@ def test_retailer_no_activo_queda_skipped(client, seeded):
     assert "paused" in por_slug["home-depot"]["detail"]
     assert por_slug["construrama"]["status"] == "skipped"
     assert ScrapeRun.objects.count() == 0
+
+
+# --- (9) F035: las observaciones del vivo se ligan a su ScrapeRun --------------
+@override_settings(CONSTRURAMA_ALGOLIA_SEARCH_KEY="")
+@pytest.mark.django_db(transaction=True)
+def test_observaciones_del_vivo_se_ligan_a_su_scrape_run(client, seeded, monkeypatch):
+    """F035: cada PriceObservation ingestada por la corrida en vivo queda ligada a
+    su ScrapeRun (triggered_by=search, search_term=q). CR sin key → solo HD corre."""
+    _patch_adapters(monkeypatch, hd_handler=_ok_handler("homedepot_varilla_batch.json"))
+
+    body = _get_search(client, seeded["zona"], "alambre")
+
+    assert _statuses(body)["home-depot"]["status"] == "ok"
+    run_hd = ScrapeRun.objects.get(retailer=seeded["hd"], triggered_by=ScrapeRun.TriggeredBy.SEARCH)
+    assert run_hd.search_term == "alambre"
+    # Las 4 observaciones del fixture quedaron ligadas a ESA corrida (ninguna suelta).
+    observaciones = PriceObservation.objects.filter(scrape_run=run_hd)
+    assert observaciones.count() == 4
+    assert all(o.zone_id == seeded["zona"].id for o in observaciones)
 
 
 # --- (8) presupuesto total: el retailer lento se reporta failed: timeout -------

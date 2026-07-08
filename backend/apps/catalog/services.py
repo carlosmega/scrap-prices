@@ -124,8 +124,10 @@ def buscar(
        (ingesta primero, así la misma respuesta ya sirve lo recién hallado).
     2. `results`: canónicos que matchean, ordenados por `sort` (`price`: menor
        `price_per_kg` disponible primero — F031; `name`: alfabético).
-    3. `raw_results`: `RetailerProduct` SIN canónico cuyo `raw_name` matchea,
-       con su observación más fresca en la zona (retailer → precio asc, tope 50).
+    3. `raw_results`: `RetailerProduct` SIN canónico, por UNIÓN de (a) los
+       hallados bajo una corrida cuyo `search_term` == `q` normalizado (F035) y
+       (b) los cuyo `raw_name` matchea, con su observación más fresca en la zona
+       (retailer → precio asc, tope 50).
     """
     zona = Zone.objects.filter(id=zone_id, is_active=True).first()
     if zona is None:
@@ -180,16 +182,56 @@ def _buscar_canonicos(termino: str, zona: Zone, sort: str) -> list[SearchResultO
     return [item for item, _, _ in resultados]
 
 
-# --- Resultados crudos por tienda (F033) -------------------------------------
+# --- Resultados crudos por tienda (F033/F035) --------------------------------
+
+
+def _rp_ids_por_termino_scrapeado(termino: str, zona: Zone) -> set:
+    """IDs de RetailerProduct (sin canónico) hallados en la zona bajo una corrida
+    cuyo `search_term` normalizado == `termino` (el fix F035).
+
+    Es el puente que hace visibles los crudos que el retailer devolvió por un
+    typo/fuzzy: sus nombres NO contienen el texto tecleado, pero la corrida que
+    los ingestó sí registró el término. La normalización REUSA `_normalizar`
+    (acento/case, + el `.strip()` que ya aplica la query) sobre AMBOS lados: el
+    término del vivo ya viene normalizado (F033), el del comando es el
+    `--category` crudo (F035). `termino` vacío no aporta (la unión la cubre el
+    filtro por nombre).
+    """
+    if not termino:
+        return set()
+    run_ids = [
+        run_id
+        for run_id, term in ScrapeRun.objects.filter(search_term__isnull=False).values_list(
+            "id", "search_term"
+        )
+        if _normalizar(term.strip()) == termino
+    ]
+    if not run_ids:
+        return set()
+    return set(
+        PriceObservation.objects.filter(
+            zone=zona,
+            scrape_run_id__in=run_ids,
+            retailer_product__is_active=True,
+            retailer_product__canonical_product__isnull=True,
+        ).values_list("retailer_product_id", flat=True)
+    )
 
 
 def _buscar_crudos(termino: str, zona: Zone) -> list[RawRetailerResultOut]:
-    """Hallazgos crudos: `RetailerProduct` SIN canónico que matchean `termino`.
+    """Hallazgos crudos: `RetailerProduct` SIN canónico, por UNIÓN de dos filtros.
 
-    Solo los que tienen observación en la zona (su precio/frescura son campos
-    obligatorios del contrato); los matcheados ya salen en `results` y NO se
-    duplican aquí. Orden: retailer → precio asc → nombre; tope 50 (spec F033).
+    Un producto entra si (a) tiene una observación en la zona bajo una corrida
+    cuyo `search_term` normalizado == `termino` (F035: lo que el retailer devolvió
+    para la query, aunque su nombre no contenga el texto tecleado) **O** (b) su
+    `raw_name` acento-insensible contiene `termino` (relevancia por nombre, F033).
+    Solo los que tienen observación en la zona (precio/frescura son obligatorios
+    del contrato); los matcheados a canónico ya salen en `results`. El dedup es
+    por construcción: se itera cada producto candidato UNA vez y se incluye si
+    (a) O (b), así un producto que cumple ambos no aparece dos veces. Orden:
+    retailer → precio asc → nombre; tope 50 (spec F033).
     """
+    ids_por_termino = _rp_ids_por_termino_scrapeado(termino, zona)
     crudos: list[RawRetailerResultOut] = []
     candidatos = (
         RetailerProduct.objects.filter(is_active=True, canonical_product__isnull=True)
@@ -197,7 +239,8 @@ def _buscar_crudos(termino: str, zona: Zone) -> list[RawRetailerResultOut]:
         .order_by("retailer__name", "raw_name")
     )
     for rp in candidatos:
-        if termino and termino not in _normalizar(rp.raw_name):
+        coincide_nombre = not termino or termino in _normalizar(rp.raw_name)
+        if not (coincide_nombre or rp.id in ids_por_termino):
             continue
         obs = ultima_observacion(rp, zone=zona)
         if obs is None:
