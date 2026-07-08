@@ -1,7 +1,8 @@
 # PRD — ConstruScan (nombre de trabajo)
 ### Comparador de precios de materiales de construcción por zona — México
 
-> **Estado:** Borrador v0.1 · Documento vivo
+> **Estado:** Borrador v0.2 · Documento vivo
+> **v0.2 (2026-07-07):** pivote a **búsqueda en vivo bajo demanda** (decisión del dueño; ver §1 y `specs/F033-busqueda-en-vivo.md`). El scraping programado pasa de único mecanismo a refresco complementario (M5).
 > **Autor:** Carlos
 > **Objetivo de ejecución:** este PRD está redactado para alimentarse a **Claude Code** como guía de construcción.
 > **Nota sobre el nombre:** `ConstruScan` es un nombre de trabajo (placeholder). Reemplazable.
@@ -17,8 +18,10 @@ ConstruScan es una **aplicación independiente** (módulo aparte; integración c
 
 El usuario selecciona su ubicación, busca un producto (p. ej. *"varilla"*), y obtiene los precios de ese producto en su zona en **ambos** retailers. Puede seleccionar productos y agregarlos a una **lista de cotización propia** (no es un carrito de compra), para construir sus propias cotizaciones con costos reales y verificables.
 
-### Principio arquitectónico no negociable
-**El scraping NO ocurre en vivo durante la búsqueda del usuario.** Los scrapers corren de forma programada y asíncrona, escriben a PostgreSQL con `zona + timestamp`, y la búsqueda del usuario consulta **siempre la base de datos propia**, nunca a los retailers en tiempo real. La UI muestra la antigüedad del dato ("actualizado hace X").
+### Principio arquitectónico (v0.2 — búsqueda en vivo bajo demanda)
+**La búsqueda consulta primero la base de datos propia.** Si no hay datos frescos (TTL 24 h) para el término+zona, dispara una consulta **en vivo bajo demanda** a los retailers dentro del mismo request (~2–25 s, con indicador de progreso), ingesta lo hallado a la BD (histórico con `zona + timestamp`) y responde; las búsquedas subsecuentes sirven de BD (cache-through, con cooldown de 15 min por término). El scraping **programado** (Celery Beat) queda como mecanismo de refresco a escala (M5). La UI muestra siempre la antigüedad del dato ("actualizado hace X").
+
+> Decisión del dueño (2026-07-07), implementada en F033. Reemplaza el principio v0.1 *"el scraping NO ocurre en vivo durante la búsqueda"*. Los guardrails de §2.3 se mantienen íntegros (rate-limit, cooldown, stop-if-blocked, sin evasión).
 
 ---
 
@@ -29,7 +32,7 @@ El usuario selecciona su ubicación, busca un producto (p. ej. *"varilla"*), y o
 - Búsqueda de productos por texto en el catálogo normalizado.
 - Visualización de precios por producto en Home Depot y Construrama para la zona seleccionada.
 - Lista de cotización del usuario (agregar/quitar productos, cantidades, snapshot de precio).
-- Subsistema de scraping programado para los dos retailers, en zona(s) piloto.
+- Subsistema de scraping **bajo demanda (live-on-miss, gatillado por la búsqueda)** para los dos retailers, más scraping programado como refresco (M5), en zona(s) piloto.
 - Normalización interna de zonas (mapeo tienda HD ↔ distribuidor Construrama).
 - Matching de SKU entre retailers (curación **manual** vía Django Admin en MVP).
 - Indicador de frescura del dato.
@@ -76,11 +79,12 @@ El usuario selecciona su ubicación, busca un producto (p. ej. *"varilla"*), y o
 
 ### Épica B — Búsqueda y comparación
 **B1.** Como usuario quiero buscar un producto por texto (p. ej. "varilla 3/8") para encontrar opciones en mi zona.
-- CA1: La búsqueda consulta el catálogo normalizado (DB propia), no los retailers en vivo.
+- CA1 (v0.2): La búsqueda consulta primero el catálogo normalizado (DB propia); si no hay datos frescos para el término+zona, consulta a los retailers **en vivo bajo demanda**, ingesta y muestra (F033).
 - CA2: Los resultados muestran productos canónicos con sus precios por retailer en la zona.
 - CA3: Cada precio muestra retailer, precio, unidad, disponibilidad y antigüedad ("actualizado hace X").
 - CA4: Puedo ordenar por precio.
 - CA5: Si un retailer no tiene el producto en la zona, se indica explícitamente.
+- CA6 (v0.2): Los hallazgos aún sin matchear a un producto canónico se muestran como **resultados crudos por tienda** (nombre tal cual, precio nativo, disponibilidad, frescura, link a la ficha), con opción de agregarlos a la cotización; la comparación cross-retailer se habilita al curarlos en Admin.
 
 **B2.** Como usuario quiero ver el detalle de un producto para comparar presentaciones y ver historial de precio.
 - CA1: Veo precios actuales por retailer en mi zona.
@@ -120,7 +124,7 @@ El usuario selecciona su ubicación, busca un producto (p. ej. *"varilla"*), y o
 - **RF3.** Búsqueda full-text en español sobre el catálogo (tolerante a acentos).
 - **RF4.** Lectura de precios por zona y retailer desde DB, con frescura visible.
 - **RF5.** Lista de cotización con snapshots de precio y totales.
-- **RF6.** Pipeline de scraping programado por retailer y zona, con ingestión a `PriceObservation`.
+- **RF6.** Pipeline de scraping **gatillado por búsqueda (bajo demanda)** y programado (refresco), por retailer y zona, con ingestión a `PriceObservation`.
 - **RF7.** Mapeo de zona interna ↔ tienda HD / distribuidor Construrama.
 - **RF8.** Curación manual de matching de SKU en Admin.
 - **RF9.** Auditoría de corridas de scraping.
@@ -130,7 +134,7 @@ El usuario selecciona su ubicación, busca un producto (p. ej. *"varilla"*), y o
 ## 6. Requerimientos no funcionales
 
 - **RNF1 (Legal/Ético).** Cumplimiento de los guardrails de la sección 2.3 en todo el pipeline.
-- **RNF2 (Rendimiento).** Búsqueda del usuario < 500 ms (consulta a DB, no a retailers).
+- **RNF2 (Rendimiento).** Búsqueda servida de BD < 500 ms; búsqueda que dispara consulta en vivo: hasta ~25 s con indicador de progreso (latencia aceptada por el dueño, 2026-07-07).
 - **RNF3 (Frescura).** Cada `PriceObservation` tiene `captured_at`; la UI nunca oculta la antigüedad.
 - **RNF4 (Resiliencia de scraping).** Reintentos con backoff (`tenacity`); una falla de un retailer no tumba al otro.
 - **RNF5 (Rate limiting).** Delay mínimo configurable por dominio; concurrencia limitada por retailer.
