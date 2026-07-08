@@ -236,5 +236,12 @@
     "capas": ["backend"],
     "spec": "specs/F035-crudos-por-termino-scrapeado.md",
     "status": "done"
+  },
+  {
+    "id": "F036",
+    "titulo": "distDir aislado (.next-ci) para builds de verificacion: init.sh/CI/review ya no corrompen el next dev del humano (.next compartido)",
+    "capas": ["frontend"],
+    "spec": "specs/F036-distdir-aislado-build.md",
+    "status": "in_progress"
   }
 ]

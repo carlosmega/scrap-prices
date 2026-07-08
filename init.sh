@@ -168,7 +168,9 @@ if [ -f frontend/package.json ]; then
     pend "sin script test:unit todavía (lo añade F002)"
   fi
   if [ "$MODE" != "quick" ]; then
-    run "build de producción" pnpm build
+    # distDir aislado (.next-ci) para NO pisar el .next del `next dev` del humano
+    # si `./dev.sh` está corriendo (F036: next dev y next build comparten .next).
+    run "build de producción (distDir .next-ci)" env NEXT_DIST_DIR=.next-ci pnpm build
   else
     pend "build saltado en modo --quick"
   fi

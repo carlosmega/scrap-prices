@@ -1,44 +1,38 @@
-# Sesión activa — HANDOFF
+# Sesión activa — F036 distDir aislado
 
-> El líder mantiene este archivo. Punto de retomada para la próxima sesión.
+> El líder mantiene este archivo. Punto de retomada de la sesión.
 
-**Feature en curso:** ninguna. **`feature_list.json`:** 32 `done`, pendiente
-`F012` (opcional).
+**Feature en curso:** `F036` (in_progress) — build de verificación usa `distDir`
+separado (`.next-ci`) para que `./init.sh`/CI/review no corrompan el `next dev`
+del humano (`.next` compartido; mordió en F033 y F035).
 
-**Estado del arnés:** VERDE — `./init.sh` 33 ok / 0 fallos (F034 backend-only).
-Backend 200 tests, vitest 57, E2E 8/8 (última corrida --e2e en F033).
+## Plan (contract-first)
+1. [hecho] `specs/F036-distdir-aislado-build.md`.
+2. [hecho] F036 `in_progress`.
+3. [hecho — LÍDER] `init.sh` Fase 4 → `NEXT_DIST_DIR=.next-ci pnpm build`;
+   `.gitignore` raíz ignora `.next-ci/` (cubre `frontend/.next-ci`).
+4. [en curso — IMPLEMENTER-FRONTEND] `frontend/next.config.ts`:
+   `distDir: process.env.NEXT_DIST_DIR || ".next"`.
+5. [pendiente] Verificar aislamiento (build a `.next-ci` no toca `.next`) + `reviewer`.
 
-## Novedad de esta sesión (cronológico)
-2 hotfixes de arnés (`+x`, Fase 2 sin Docker) · **F032 CI** · **F026 Construrama**
-(2º retailer) · `dev.sh` único · **PRD v0.2** (pivote) · **F033 Búsqueda en vivo
-bajo demanda** · **F034 Fix URL ficha Home Depot** (bug de uso real: `/p/{sku}`
-404 → `seo.href` real; ver history).
+## Decisión de flujo del humano (2026-07-08)
+- **"Yo (líder) te preparo el entorno en cada cierre":** al cerrar una feature
+  backend, aplico su migración a `db.sqlite3` y (si hubo build) limpio `.next`, y
+  aviso "listo, refresca". El humano sigue con `./dev.sh` arriba.
 
-## La app HOY
-Buscar un término consulta HD+Construrama en vivo si no hay datos frescos, ingesta
-y muestra canónicos comparados + crudos por tienda. Los enlaces a la ficha de HD
-ahora abren la página real (seo.href), no 404. `backend/.env` (gitignored) tiene
-la key de Construrama.
-
-## Pendiente operativo
-- **TODO el lote SIN pushear** (regla `ask`). Commits locales en orden:
-  `1f48449` dev.sh · `339d21b` abre F033 · `0223f3c` PRD v0.2 · `b41e67e` F033 ·
-  `af6151e` abre F034 · (falta el commit de cierre F034 que hace el líder ahora).
-- Para limpiar las URLs viejas de HD en la BD del humano: re-buscar el producto
-  (el vivo re-ingesta con refresh) o `./dev.sh` (re-seed).
+## Estado app / arrastre
+- 34 `done` (F035 cerrada). Tu `db.sqlite3` ya tiene la migración 0003 → search
+  funciona; busca "impermeabilizante" → 29 crudos.
+- **Lote SIN pushear** (regla `ask`): dev.sh, F033, PRD v0.2, F034, abre F035,
+  F035, abre F036 (+ cierre F036). El humano aprueba el push.
 - Committer local `M081899@…local` (no enlaza a GitHub `carlosmega`).
 
-## Próximos pasos sugeridos
-1. **Chore (hallazgo F033):** `next dev` + `pnpm build` comparten `.next/` →
-   no correr `init.sh`/reviews con `./dev.sh` arriba. distDir separado / guard.
-2. **Matching en Admin** de SKUs reales que traiga el vivo → comparación $/kg
-   cross-retailer. Luego auto-match (rapidfuzz, M5).
-3. **Deuda F031:** normalizar la cotización (precio nativo hoy).
-4. Celery Beat como refresco programado (PRD v0.2 lo degradó a complemento M5).
-5. `F012` opcional.
+## Próximos (tras F036)
+1. Matching en Admin de SKUs reales del vivo → comparación $/kg cross-retailer.
+2. Auto-match rapidfuzz (M5). 3. Deuda F031 (cotización nativa). 4. F012 opcional.
 
 ## Cómo levantar
 ```bash
 ./dev.sh   # backend :8800 + frontend :3300 (Ctrl+C detiene ambos)
-# OJO: no correr ./init.sh ni reviews con dev.sh arriba (chore #1)
+# Tras F036: ./init.sh y los reviews ya NO tocan tu .next (build va a .next-ci).
 ```

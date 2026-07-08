@@ -12,6 +12,7 @@ db.sqlite3
 # Node
 node_modules/
 .next/
+.next-ci/
 *.tsbuildinfo
 playwright-report/
 test-results/
