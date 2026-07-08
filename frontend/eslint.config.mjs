@@ -33,6 +33,10 @@ const eslintConfig = [
     ignores: [
       "node_modules/**",
       ".next/**",
+      // F036: build output del distDir aislado de verificación (NEXT_DIST_DIR=.next-ci).
+      // Es generado, igual que .next/; sin esto, lint del build de prod falla y rompe
+      // el objetivo de F036 (init.sh verde repetible cuando .next-ci/ existe).
+      ".next-ci/**",
       "out/**",
       "build/**",
       "next-env.d.ts",

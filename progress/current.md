@@ -1,38 +1,42 @@
-# Sesión activa — F036 distDir aislado
+# Sesión activa — HANDOFF
 
-> El líder mantiene este archivo. Punto de retomada de la sesión.
+> El líder mantiene este archivo. Punto de retomada para la próxima sesión.
 
-**Feature en curso:** `F036` (in_progress) — build de verificación usa `distDir`
-separado (`.next-ci`) para que `./init.sh`/CI/review no corrompan el `next dev`
-del humano (`.next` compartido; mordió en F033 y F035).
+**Feature en curso:** ninguna. **`feature_list.json`:** 34 `done`, pendiente
+`F012` (opcional).
 
-## Plan (contract-first)
-1. [hecho] `specs/F036-distdir-aislado-build.md`.
-2. [hecho] F036 `in_progress`.
-3. [hecho — LÍDER] `init.sh` Fase 4 → `NEXT_DIST_DIR=.next-ci pnpm build`;
-   `.gitignore` raíz ignora `.next-ci/` (cubre `frontend/.next-ci`).
-4. [en curso — IMPLEMENTER-FRONTEND] `frontend/next.config.ts`:
-   `distDir: process.env.NEXT_DIST_DIR || ".next"`.
-5. [pendiente] Verificar aislamiento (build a `.next-ci` no toca `.next`) + `reviewer`.
+**Estado del arnés:** VERDE. `./init.sh` **verde repetible** (F036 eliminó el
+roce del `.next`). Backend 207 tests, vitest 57, E2E 8/8.
 
-## Decisión de flujo del humano (2026-07-08)
-- **"Yo (líder) te preparo el entorno en cada cierre":** al cerrar una feature
-  backend, aplico su migración a `db.sqlite3` y (si hubo build) limpio `.next`, y
-  aviso "listo, refresca". El humano sigue con `./dev.sh` arriba.
+## La app HOY
+Busca un término; si no hay datos frescos consulta HD+Construrama en vivo, ingesta
+y muestra canónicos comparados + crudos por tienda. Resuelto en esta ronda de QA:
+- **F034:** enlaces a la ficha de HD abren la página real (`seo.href`), no 404.
+- **F035:** crudos se muestran por término scrapeado (typo/fuzzy del retailer ya no
+  los oculta). Busca "impermeabilizante" → 29.
+- **F036:** `./init.sh`/reviews ya NO corrompen tu `next dev` (build va a `.next-ci`).
 
-## Estado app / arrastre
-- 34 `done` (F035 cerrada). Tu `db.sqlite3` ya tiene la migración 0003 → search
-  funciona; busca "impermeabilizante" → 29 crudos.
-- **Lote SIN pushear** (regla `ask`): dev.sh, F033, PRD v0.2, F034, abre F035,
-  F035, abre F036 (+ cierre F036). El humano aprueba el push.
-- Committer local `M081899@…local` (no enlaza a GitHub `carlosmega`).
+## Decisión de flujo (2026-07-08)
+Yo (líder) preparo el entorno en cada cierre: aplico migraciones a `db.sqlite3` y
+limpio `.next` si hizo falta. Con F036, el `.next` ya no se ensucia por reviews.
 
-## Próximos (tras F036)
-1. Matching en Admin de SKUs reales del vivo → comparación $/kg cross-retailer.
-2. Auto-match rapidfuzz (M5). 3. Deuda F031 (cotización nativa). 4. F012 opcional.
+## Pendiente operativo — PUSH
+**Lote SIN pushear** (regla `ask`), en orden. Commits de líder/features:
+`1f48449` dev.sh · `339d21b` abre F033 · `0223f3c` PRD v0.2 · `b41e67e` F033 ·
+`af6151e` abre F034 · `e318a22` F034 · `a9503d7` abre F035 · `a847d04` F035 ·
+`68b322e` abre F036 · (+ cierre F036 que hace el líder ahora). El humano aprueba.
+Committer local `M081899@…local` (no enlaza a GitHub `carlosmega`).
+
+## Próximos pasos sugeridos
+1. **Matching en Admin** de los SKUs reales del vivo (cemento, impermeabilizante…)
+   → habilita comparación $/kg cross-retailer. Luego auto-match (rapidfuzz, M5).
+2. **Deuda F031:** cotización en precio nativo.
+3. **Deuda F035:** `_hay_datos_frescos` matchea por nombre → re-buscar un typo dentro
+   del TTL re-dispara el vivo hasta el cooldown (no vuelve a 0 gracias a la FK).
+4. Celery Beat como refresco programado. 5. `F012` opcional.
 
 ## Cómo levantar
 ```bash
 ./dev.sh   # backend :8800 + frontend :3300 (Ctrl+C detiene ambos)
-# Tras F036: ./init.sh y los reviews ya NO tocan tu .next (build va a .next-ci).
+# Ya puedes correr ./init.sh con dev.sh arriba: no te toca el .next (F036).
 ```
