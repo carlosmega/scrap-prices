@@ -1,49 +1,45 @@
-# Sesión activa — HANDOFF
+# Sesión activa — F026 ConstruramaAdapter
 
-> El líder mantiene este archivo. Es el punto de retomada para la próxima sesión.
+> El líder mantiene este archivo. Punto de retomada de la sesión.
 
-**Feature en curso:** ninguna. **`feature_list.json`:** 29 `done`, pendientes
-`F012` (opcional) y `F026` (Construrama, bloqueada).
+**Feature en curso:** `F026` (in_progress) — ConstruramaAdapter (Algolia, respetuoso):
+parser + ingestión + Celery + seed, segundo retailer (habilita comparación
+cross-retailer real).
 
-**Estado del arnés:** VERDE. `init.sh --quick` local (32 ok / 0 fallos) y
-**CI en GitHub Actions corriendo `init.sh --e2e` en verde** (run `28907565411`,
-`conclusion=success`, 2m4s). Working tree limpio, `main` sincronizado con
-`origin/main`.
+**ToS: APROBADO por el humano el 2026-07-07** → levanta el `paused` del recon §0.
+Guardrails vigentes: UA honesto, rate-limit, sin evasión, raw_payload, stop-if-blocked.
 
-## Novedad de esta sesión
-- **F032 · CI (GitHub Actions)** cerrada, APROBADO 1er ciclo. `.github/workflows/ci.yml`:
-  job `verify` (ubuntu) instala uv + Node 24 + pnpm 11 + Chromium de Playwright y
-  corre `bash init.sh --e2e` en cada push a `main`, cada PR y `workflow_dispatch`;
-  sube `playwright-report` como artefacto si falla. Primera corrida verde contra
-  el commit del workflow.
-- **2 hotfixes de arnés** (fuera del flujo de features, pusheados):
-  - `d951a03` restaura bit `+x` en `init.sh` y hooks (un checkout nuevo arrancaba
-    en ROJO: `guard-feature.sh` no ejecutable).
-  - `435d25c` Fase 2 de `init.sh` ya no exige Docker (daba falso-ROJO por puertos
-    5432/6379 ocupados; el MVP corre en SQLite). Ahora Fase 2 es `pendiente`.
+## Bloqueo actual (esperando insumo humano)
+El parser necesita la **forma real de `hits[]`** de la respuesta Algolia, que NO
+estaba en el 1er HAR (F011 §2.1/§6). El humano va a capturar un **2º HAR "Save with
+content"** y dejarlo en `docs/recon/har/` (gitignored). Ruta elegida: "tú capturas
+HAR" (no hago requests yo; parser con golden fixtures, patrón F025).
 
-## Próximos pasos (orden sugerido)
-1. **F026 ConstruramaAdapter** — BLOQUEADA: falta que el humano capture el **body
-   de la respuesta de Algolia** (`njvy3eu5dw-dsn.algolia.net`, índice
-   `construrama_mx`) con "Save HAR with content". Es el mayor valor de producto
-   (comparación cross-retailer *real*, hoy solo Home Depot está en vivo).
-2. **Auto-match (rapidfuzz)** para no curar SKUs a mano (M5, sin spec aún).
-3. **Deuda de F031:** normalizar la **cotización** (`apps/lists`) — hoy "Agregar 1"
-   de un SKU listado por tonelada mete 1 tonelada al carrito. Requiere decisión de
-   producto (¿cantidad en piezas?).
-4. `F012` (script recon read-only) opcional.
+### Qué debe traer la 2ª captura (en orden de importancia)
+1. **Body de la respuesta de Algolia** — `POST njvy3eu5dw-dsn.algolia.net/1/indexes/*/queries`
+   (índice `construrama_mx`) tras buscar "varilla" en Monterrey/Nuevo León.
+   → de aquí salen los nombres de campos de `hits[]` (objectID/productCode, nombre,
+   precio `OSS7_priceValue_mxn_double`, url, unidad, marca, facets de diámetro/grado/largo).
+2. `GET .../store-finder/setStoresByCity?...` — store-id/external_id del distribuidor de Monterrey.
+3. `GET .../get/algolia` — App ID + search key pública + prefijo `OSS7` por zona.
 
-## Follow-ups no bloqueantes
-- **CI:** subir las actions de terceros a majors v5 (`checkout`, `setup-node`,
-  `pnpm/action-setup`) cuando estén estables — GitHub avisa deprecación del
-  runtime Node 20. No falla el job.
-- **Atribución git:** los commits de esta sesión (`d951a03`, `435d25c`, `8e67b10`)
-  quedaron con committer `M081899@…local`, no enlazados a la cuenta GitHub
-  `carlosmega`. Ya están en `origin/main`; corregirlo ahora requeriría reescribir
-  historia publicada (decisión del humano).
+## Plan (una vez llegue el HAR)
+1. [hecho] `specs/F026-adapter-construrama.md` (contrato; campos de hits[] a cerrar con el HAR).
+2. [hecho] F026 `in_progress`.
+3. [pendiente] Recibir HAR en `docs/recon/har/` → extraer/sanitizar golden fixtures.
+4. [pendiente] Lanzar `implementer-backend` con la spec: adapter + parser + ingestión +
+   tarea Celery + wiring en `manage.py scrape` + seed Construrama Monterrey.
+5. [pendiente] Validar dry-run offline (MockTransport) y, si procede, corrida real respetuosa.
+6. [pendiente] `reviewer` → APROBADO → `done` → history.md.
+
+## Arrastre de la sesión (todo en origin/main salvo lo indicado)
+- Repo validado; 2 hotfixes de arnés (`d951a03` +x, `435d25c` docker) y **F032 CI
+  entregada y verde en Actions** (workflow `.github/workflows/ci.yml`).
+- **Permisos:** `git push` movido a `permissions.ask` (aprobación por-push). Commit
+  local `chore(harness): git push pasa a 'ask'` **SIN pushear** (espera tu aprobación).
+- Atribución git de la sesión con committer `M081899@…local` (no enlaza a `carlosmega`).
 
 ## Cómo levantar (local)
 ```bash
-./dev-backend.sh    # :8800  (migrate + seed + runserver)
-./dev-frontend.sh   # :3300  -> http://localhost:3300
+./dev-backend.sh    # :8800   ./dev-frontend.sh   # :3300
 ```
