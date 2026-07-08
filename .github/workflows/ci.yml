@@ -1,0 +1,71 @@
+name: CI
+
+# El arnés no se fía de "verde en mi máquina": este workflow corre el mismo
+# gate canónico (./init.sh --e2e) en cada push a main y en cada PR.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: init.sh --e2e (arnés completo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # uv vía instalador oficial (versión-agnóstico); PATH explícito para los
+      # pasos siguientes. uv resuelve Python >=3.12 (el runner ya trae 3.12).
+      - name: Instalar uv
+        run: |
+          curl -LsSf https://astral.sh/uv/install.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+
+      # pnpm antes de setup-node para poder cachear el store de pnpm.
+      - name: Instalar pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - name: Instalar Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: "**/pnpm-lock.yaml"
+
+      # Backend corre en SQLite con defaults; copia defensiva por si CI toma
+      # otra rama de settings. No sobrescribe un .env existente.
+      - name: Env por defecto (SQLite)
+        run: '[ -f .env.example ] && cp -n .env.example .env || true'
+
+      # init.sh Fase 6 corre `playwright test` pero NO descarga navegadores:
+      # se instala aquí Chromium (+ deps de SO) antes del gate.
+      - name: Instalar Chromium de Playwright
+        working-directory: e2e
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm exec playwright install --with-deps chromium
+
+      # Gate canónico completo: Fases 0-6 (backend, frontend, contrato,
+      # arquitectura y E2E). GitHub exporta CI=true, así que la config de
+      # Playwright arranca servidores limpios (reuseExistingServer=false).
+      - name: Verificación del arnés (init.sh --e2e)
+        run: bash init.sh --e2e
+
+      - name: Subir reporte de Playwright si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: e2e/playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

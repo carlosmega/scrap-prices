@@ -1,51 +1,39 @@
-# Sesión activa — HANDOFF (pausa 2026-06-16)
+# Sesión activa — F032 CI (GitHub Actions)
 
-> El líder mantiene este archivo. Es el punto de retomada para la próxima sesión.
+> El líder mantiene este archivo. Punto de retomada de la sesión.
 
-**Feature en curso:** ninguna. **`feature_list.json`:** 28 `done`, pendientes `F012` (opcional) y `F026` (Construrama, bloqueada).
-**Estado del arnés:** `./init.sh --e2e` VERDE (33 ok, 0 fallos, 3 opcionales: jq/docker/infra). Backend 144 tests, vitest 41, E2E 7.
+**Feature en curso:** `F032` (in_progress) — CI con GitHub Actions que corre
+`./init.sh --e2e` en cada push a `main` y en cada PR.
 
-## Qué está hecho (novedad de esta sesión)
-- **F031 · M5 Normalización de unidad** (cerrada, APROBADO 1er ciclo). La comparación cross-retailer ya es **real**:
-  - Modelo `CanonicalProduct.mass_kg` + `RetailerProduct.sale_unit` (+migración).
-  - `apps/catalog/normalization.py::normaliza_precio` puro (kg/tonelada/pieza, parcial sin masa, 2dp ROUND_HALF_UP) con tabla de casos.
-  - Búsqueda ordena y elige "menor precio" por **`price_per_kg`** (ya no por el número crudo).
-  - Contrato: `PriceByRetailerOut` +`sale_unit`/`price_per_piece`/`price_per_kg`; `CanonicalProduct*Out` +`mass_kg`; `PriceHistoryPointOut` +`sale_unit`.
-  - Ingestión HD mapea el código UN/ECE → `sale_unit`. Seed con tabla **NMX** (masa×longitud) + HD→tonelada / CR→kg + historial multiplicativo.
-  - UI: titular **$/pieza** + nativo **$/ton** + **$/kg** + badge "mejor precio" + fallback "sin normalizar".
-  - Decisiones de producto (unidad pieza+kg, tabla NMX, mostrar nativo) cerradas con el humano el 2026-06-16.
-- (Sesiones previas) Bootstrap F001–F004 · Modelo M0 F006–F009 · API M3 F013–F018 · UI M4 F019–F022 · Puertos fijos F023 · Recon M1 F010/F011 · **M2 Home Depot EN VIVO** F024/F025/F027/F028/F029 · F030 fix hydration.
+## Por qué
+En esta sesión un checkout nuevo se rompió en 3 formas invisibles en local
+(faltaba `+x` en `init.sh`/hooks, faltaba el navegador de Playwright, y Docker
+daba falso-rojo). CI es la red que convierte "verde en mi máquina" en "verde en
+cada push" y blinda las 28+ features `done`. Es la tesis del repo (verificable
+y auditable) hecha automática.
 
-## Próximos pasos (orden sugerido)
-1. **Resto de M5** (orden libre, todos features nuevos sin spec aún):
-   - **Auto-match (rapidfuzz)** para no curar SKUs a mano.
-   - **Celery beat** para programar `scrape` (broker pendiente; hoy Celery no se ejercita en MVP).
-   - **CI** (GitHub Actions corriendo `./init.sh`).
-   - **Export CSV** de comparación; logging/observabilidad.
-2. **Follow-up de F031 (deuda conocida):** normalizar la **cotización** (`apps/lists`). Hoy sigue en precio nativo → "Agregar 1" de un SKU listado por tonelada = 1 tonelada en el carrito. Decidir con el humano si la cantidad va en piezas.
-3. **F026 ConstruramaAdapter** — BLOQUEADA: falta que el humano capture el **body de la respuesta de Algolia** (`njvy3eu5dw-dsn.algolia.net`, índice `construrama_mx`) con "Save HAR with content" o un ejemplo en vivo. Sin la forma de `hits[]` no se cierra el parser.
-4. `F012` (script recon read-only) opcional.
+## Plan
+1. [hecho] `specs/F032-ci-github-actions.md` (contrato de la feature).
+2. [hecho] `.github/workflows/ci.yml`: job `verify` (ubuntu) → instala uv +
+   Node 24 + pnpm 11 + Chromium de Playwright → `bash init.sh --e2e`; sube
+   `playwright-report` como artefacto si falla.
+3. [hecho] `F032` abierta `in_progress` en `feature_list.json`.
+4. [pendiente] Validación local: YAML parseable + `init.sh --quick` verde.
+5. [pendiente] **`git push origin main`** — dispara la corrida (el push directo
+   del agente se bloqueó antes; lo autoriza el humano).
+6. [pendiente] Observar la corrida en Actions (o vía MCP de GitHub) → verde.
+7. [pendiente] Al ver verde: `review_F032.md` APROBADO → marcar `done` →
+   línea en `progress/history.md`.
 
-## Pendiente operativo (esta sesión)
-- **Cambios de F031 SIN commitear** (el líder no commitea sin que el humano lo pida). Listo para commit si se desea: migración + modelo/normalización/schema/seed/ingestión/admin (backend), UI + E2E + `schema.d.ts` regenerado (frontend), `openapi.json`, specs/F031, feature_list.json, progress/.
+## Estado del repo (arrastre de esta sesión)
+- 2 commits locales adelante de `origin/main`, listos para push:
+  - `d951a03` fix(harness): restaura bit +x en init.sh y hooks.
+  - `435d25c` fix(harness): Fase 2 no exige Docker (MVP en SQLite).
+- Deuda conocida: committer de esos commits es `M081899@…local`, no el correo
+  de GitHub (no se enlazan a la cuenta `carlosmega`). Fácil de reautorar antes
+  del push si se decide.
 
-## Cómo levantar (Git Bash)
-```bash
-./dev-backend.sh    # :8800  (migrate + seed + runserver)
-./dev-frontend.sh   # :3300  -> http://localhost:3300
-```
-Nota: la BD local `db.sqlite3` (gitignored) puede no tener datos reales en sesión nueva. Para precios reales de HD:
-```bash
-cd backend
-uv run python manage.py seed
-uv run python manage.py scrape --retailer home-depot --zone monterrey-metro --category varilla   # corrida real (red)
-# luego matchear los SKUs reales a canónicos y fijar su sale_unit en Admin (curación)
-```
-
-## Decisiones / gotchas clave (no perder)
-- **Scraping SOLO respetuoso, nunca evasión** (ToS aprobado por el dueño). Ver memoria `scraping-recon-human-gate`.
-- **El sandbox del agente SÍ tiene red** → puede correr `scrape`/validar endpoints en vivo (respetuosamente).
-- **Matching manual** (MVP); `sale_unit` se cura/confirma en Admin (HD lo autollena desde el código UN/ECE).
-- **Comparación = $/kg; titular = $/pieza** (F031). `mass_kg` (tabla NMX) editable en Admin; null ⇒ "sin normalizar".
-- SQLite/sin-Docker (MVP); contrato OpenAPI→tipos sin drift; arquitectura limpia con greps en `init.sh` + import-linter/ESLint.
-- Traza completa en `progress/history.md`; specs en `specs/`; recon en `docs/recon/`.
+## Gate de "done" para F032
+La feature NO es `done` hasta ver la corrida **verde** en GitHub Actions contra
+el commit del workflow. Los criterios locales (YAML válido, init.sh verde) son
+necesarios pero no suficientes.

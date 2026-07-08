@@ -208,5 +208,12 @@
     "capas": ["backend", "frontend", "e2e"],
     "spec": "specs/F031-normalizacion-unidad.md",
     "status": "done"
+  },
+  {
+    "id": "F032",
+    "titulo": "CI: GitHub Actions corriendo ./init.sh --e2e en cada push a main y PR (red de regresion del arnes)",
+    "capas": ["ci"],
+    "spec": "specs/F032-ci-github-actions.md",
+    "status": "in_progress"
   }
 ]
