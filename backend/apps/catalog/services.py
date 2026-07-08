@@ -1,36 +1,61 @@
-"""Lógica de negocio del catálogo (F015): búsqueda y ensamblado de precios.
+"""Lógica de negocio del catálogo (F015/F033): búsqueda y ensamblado de precios.
 
-Sin HTTP, sin routers. La búsqueda consulta SOLO la DB propia (principio no
-negociable del PRD §1/B1): por cada `CanonicalProduct` que matchea `q`, ensambla
-un `PriceByRetailerOut` por cada `RetailerProduct` enlazado, con el precio más
-fresco en la zona (reutiliza `apps.prices.services.ultima_observacion`). Tolera
-acentos en SQLite normalizando (NFKD + strip de diacríticos) en memoria; Postgres
-FTS llega en M5. El orden (`price`|`name`) también vive aquí.
+Sin HTTP, sin routers. La búsqueda consulta PRIMERO la DB propia: por cada
+`CanonicalProduct` que matchea `q`, ensambla un `PriceByRetailerOut` por cada
+`RetailerProduct` enlazado, con el precio más fresco en la zona (reutiliza
+`apps.prices.services.ultima_observacion`). Tolera acentos en SQLite
+normalizando (NFKD + strip de diacríticos) en memoria; Postgres FTS llega en M5.
+El orden (`price`|`name`) también vive aquí.
+
+F033 (pivote de producto 2026-07-07, reemplaza el §1 del PRD): si para `q`+zona
+no hay datos frescos (TTL) y no aplica el cooldown, la búsqueda dispara la
+corrida EN VIVO de ambos retailers (`apps.scraping.services`), ingesta lo
+hallado (cache-through) y responde canónicos + crudos + info de la corrida.
+El GATILLO (cuándo) vive aquí; el CÓMO correr vive en scraping.
 """
 
 import unicodedata
+from datetime import timedelta
 from decimal import Decimal
 
-from apps.catalog.models import CanonicalProduct
+from django.conf import settings
+from django.utils import timezone
+
+from apps.catalog.models import CanonicalProduct, RetailerProduct
 from apps.catalog.normalization import normaliza_precio
 from apps.catalog.schemas import (
     CanonicalProductDetailOut,
     CanonicalProductRefOut,
+    LiveRetailerStatusOut,
+    LiveSearchInfoOut,
     PriceByRetailerOut,
     PriceHistoryPointOut,
     ProductDetailOut,
+    RawRetailerResultOut,
     RetailerRefOut,
+    SearchOut,
     SearchResultOut,
 )
-from apps.geo.models import Zone
-from apps.prices.models import PriceObservation
+from apps.geo.models import Retailer, Zone
+from apps.prices.models import PriceObservation, ScrapeRun
 from apps.prices.services import ultima_observacion
+from apps.scraping import services as scraping_services
 
 # Tamaño por defecto del historial de precios en el detalle (PRD/F016: N=20).
 _HISTORIAL_DEFAULT = 20
 
 # Ordena los retailers-sin-precio al final cuando se ordena por precio.
 _PRECIO_INFINITO = None  # marcador semántico; se traduce a +inf en la key
+
+# F033: tope de resultados crudos por búsqueda (spec).
+_RAW_RESULTS_MAX = 50
+
+# F033: largo mínimo del término normalizado para considerar el vivo.
+_TERMINO_MIN_VIVO = 3
+
+# F033: el término que se persiste/consulta en ScrapeRun.search_term se trunca
+# al max_length del campo para que cooldown y auditoría sean consistentes.
+_TERMINO_MAX_CORRIDA = 200
 
 
 def _normalizar(texto: str) -> str:
@@ -43,9 +68,7 @@ def _normalizar(texto: str) -> str:
     return "".join(ch for ch in descompuesto if not unicodedata.combining(ch))
 
 
-def _ensamblar_precio(
-    retailer_product, zone: Zone, mass_kg: Decimal | None
-) -> PriceByRetailerOut:
+def _ensamblar_precio(retailer_product, zone: Zone, mass_kg: Decimal | None) -> PriceByRetailerOut:
     """Arma el PriceByRetailerOut de un RetailerProduct con su precio más fresco.
 
     Sin observación en la zona → price/captured_at None, is_available False.
@@ -81,11 +104,7 @@ def _menor_precio_por_kg(prices: list[PriceByRetailerOut]):
     longitud), NO el precio nativo crudo. Solo cuentan los retailers disponibles
     con `price_per_kg` computado.
     """
-    disponibles = [
-        p.price_per_kg
-        for p in prices
-        if p.price_per_kg is not None and p.is_available
-    ]
+    disponibles = [p.price_per_kg for p in prices if p.price_per_kg is not None and p.is_available]
     return min(disponibles) if disponibles else None
 
 
@@ -93,27 +112,40 @@ def buscar(
     q: str,
     zone_id: str,
     sort: str = "price",
-) -> list[SearchResultOut] | None:
-    """Busca canónicos que matchean `q` y ensambla sus precios en la zona.
+    live: str = "auto",
+) -> SearchOut | None:
+    """Busca `q` en la zona: canónicos comparados + crudos + vivo si falta (F033).
 
     Devuelve None si la zona no existe o está inactiva (el router lo traduce a
-    404). En caso contrario, devuelve la lista de `SearchResultOut` ordenada por
-    `sort` (`price`: menor `price_per_kg` disponible primero; `name`: alfabético).
+    404). En caso contrario devuelve `SearchOut`:
 
-    F031: el orden por `price` y el "menor precio" se basan en `price_per_kg`
-    (comparación cross-retailer real), NO en el número nativo crudo.
+    1. Gatillo live-on-miss: si `live=auto`, el término es utilizable y NO hay
+       datos frescos ni cooldown, corre el scrape EN VIVO de ambos retailers
+       (ingesta primero, así la misma respuesta ya sirve lo recién hallado).
+    2. `results`: canónicos que matchean, ordenados por `sort` (`price`: menor
+       `price_per_kg` disponible primero — F031; `name`: alfabético).
+    3. `raw_results`: `RetailerProduct` SIN canónico cuyo `raw_name` matchea,
+       con su observación más fresca en la zona (retailer → precio asc, tope 50).
     """
     zona = Zone.objects.filter(id=zone_id, is_active=True).first()
     if zona is None:
         return None
 
     termino = _normalizar(q.strip())
+    live_info = _buscar_en_vivo_si_falta(termino, zona, live)
 
+    return SearchOut(
+        results=_buscar_canonicos(termino, zona, sort),
+        raw_results=_buscar_crudos(termino, zona),
+        live=live_info,
+    )
+
+
+def _buscar_canonicos(termino: str, zona: Zone, sort: str) -> list[SearchResultOut]:
+    """Canónicos que matchean `termino` con sus precios en la zona (F015/F031)."""
     resultados: list[tuple[SearchResultOut, object, str]] = []
     canonicos = (
-        CanonicalProduct.objects.filter(is_active=True)
-        .select_related("category")
-        .order_by("name")
+        CanonicalProduct.objects.filter(is_active=True).select_related("category").order_by("name")
     )
     for canonico in canonicos:
         if termino and termino not in _normalizar(canonico.name):
@@ -146,6 +178,139 @@ def buscar(
         )
 
     return [item for item, _, _ in resultados]
+
+
+# --- Resultados crudos por tienda (F033) -------------------------------------
+
+
+def _buscar_crudos(termino: str, zona: Zone) -> list[RawRetailerResultOut]:
+    """Hallazgos crudos: `RetailerProduct` SIN canónico que matchean `termino`.
+
+    Solo los que tienen observación en la zona (su precio/frescura son campos
+    obligatorios del contrato); los matcheados ya salen en `results` y NO se
+    duplican aquí. Orden: retailer → precio asc → nombre; tope 50 (spec F033).
+    """
+    crudos: list[RawRetailerResultOut] = []
+    candidatos = (
+        RetailerProduct.objects.filter(is_active=True, canonical_product__isnull=True)
+        .select_related("retailer")
+        .order_by("retailer__name", "raw_name")
+    )
+    for rp in candidatos:
+        if termino and termino not in _normalizar(rp.raw_name):
+            continue
+        obs = ultima_observacion(rp, zone=zona)
+        if obs is None:
+            # Sin observación en la zona no hay precio/frescura que mostrar.
+            continue
+        crudos.append(
+            RawRetailerResultOut(
+                retailer_slug=rp.retailer.slug,
+                retailer_name=rp.retailer.name,
+                retailer_product_id=rp.id,
+                external_sku=rp.external_sku,
+                raw_name=rp.raw_name,
+                url=rp.url or None,
+                brand=rp.brand or None,
+                sale_unit=rp.sale_unit or None,
+                price=float(obs.price),
+                currency=obs.currency,
+                is_available=obs.is_available,
+                captured_at=obs.captured_at,
+            )
+        )
+    crudos.sort(key=lambda c: (c.retailer_slug, c.price, _normalizar(c.raw_name)))
+    return crudos[:_RAW_RESULTS_MAX]
+
+
+# --- Gatillo de la búsqueda en vivo (F033) -----------------------------------
+# CUÁNDO disparar vive aquí (dominio de la búsqueda: frescura del término en la
+# zona + cooldown). CÓMO correr vive en apps.scraping.services (adapters,
+# concurrencia, presupuesto, guardrails §2.3).
+
+
+def _matchea_termino(termino: str, rp: RetailerProduct) -> bool:
+    """¿El RP (o su canónico) matchea `termino` acento-insensible?"""
+    if not termino:
+        return True
+    if termino in _normalizar(rp.raw_name):
+        return True
+    canonico = rp.canonical_product
+    return canonico is not None and termino in _normalizar(canonico.name)
+
+
+def _hay_datos_frescos(termino: str, zona: Zone) -> bool:
+    """¿Existe ALGUNA observación (canónica o cruda) fresca para término+zona?
+
+    "Fresca" = `captured_at` dentro de `SEARCH_LIVE_TTL_HOURS`. El matcheo es el
+    mismo de la búsqueda (acento-insensible, en memoria — SQLite MVP): sobre el
+    `raw_name` del RP y el nombre de su canónico si lo tiene.
+    """
+    limite = timezone.now() - timedelta(hours=settings.SEARCH_LIVE_TTL_HOURS)
+    rp_ids = [
+        rp.id
+        for rp in RetailerProduct.objects.filter(is_active=True).select_related("canonical_product")
+        if _matchea_termino(termino, rp)
+    ]
+    if not rp_ids:
+        return False
+    return PriceObservation.objects.filter(
+        retailer_product_id__in=rp_ids, zone=zona, captured_at__gte=limite
+    ).exists()
+
+
+def _en_cooldown(termino_corrida: str, zona: Zone, retailer: Retailer) -> bool:
+    """¿Hay un `ScrapeRun` reciente de este término+zona+retailer?
+
+    Aplica CUALQUIER corrida (aunque hallara 0 items o fallara): el cooldown
+    existe para no martillar términos sin resultados ("asdfgh").
+    """
+    limite = timezone.now() - timedelta(minutes=settings.SEARCH_LIVE_COOLDOWN_MINUTES)
+    return ScrapeRun.objects.filter(
+        retailer=retailer,
+        zone=zona,
+        search_term=termino_corrida,
+        started_at__gte=limite,
+    ).exists()
+
+
+def _buscar_en_vivo_si_falta(termino: str, zona: Zone, live: str) -> LiveSearchInfoOut | None:
+    """Dispara la corrida en vivo si procede; None si no se disparó.
+
+    Reglas del gatillo (spec F033):
+    - `live=never` → nunca. Término normalizado con menos de 3 chars → nunca.
+    - Solo si NO hay ninguna observación del término+zona más fresca que el TTL.
+    - Por retailer: si tiene un `ScrapeRun` del término+zona dentro del
+      cooldown queda fuera; si NINGÚN retailer queda, no se dispara.
+    """
+    if live == "never" or len(termino) < _TERMINO_MIN_VIVO:
+        return None
+    if _hay_datos_frescos(termino, zona):
+        return None
+
+    termino_corrida = termino[:_TERMINO_MAX_CORRIDA]
+    retailers = sorted(
+        Retailer.objects.filter(slug__in=scraping_services.LIVE_RETAILER_SLUGS),
+        key=lambda r: scraping_services.LIVE_RETAILER_SLUGS.index(r.slug),
+    )
+    retailers = [r for r in retailers if not _en_cooldown(termino_corrida, zona, r)]
+    if not retailers:
+        return None
+
+    reporte = scraping_services.correr_busqueda_en_vivo(termino_corrida, zona, retailers)
+    return LiveSearchInfoOut(
+        triggered=True,
+        duration_ms=reporte.duration_ms,
+        retailers=[
+            LiveRetailerStatusOut(
+                retailer_slug=outcome.retailer_slug,
+                status=outcome.status,
+                items_found=outcome.items_found,
+                detail=outcome.detail,
+            )
+            for outcome in reporte.outcomes
+        ],
+    )
 
 
 def _historial(canonico: CanonicalProduct, zona: Zone, n: int) -> list[PriceHistoryPointOut]:

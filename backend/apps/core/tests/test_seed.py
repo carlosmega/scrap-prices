@@ -1,18 +1,24 @@
-"""Tests del management command `seed` (F013).
+"""Tests del management command `seed` (F013/F033).
 
 Cubre los criterios de aceptación de la spec:
 - `call_command("seed")` crea el grafo mínimo del PRD (Monterrey Metro · varilla);
 - los conteos esperados existen (retailers, locations, zona, mapas, categoría,
   canónicos, retailer-products matcheados y observaciones con historial);
 - `services.ultima_observacion` (F008) devuelve la observación más reciente;
+- F033: cada RP tiene una observación FRESCA (captured_at ≈ ahora) — con datos
+  frescos la búsqueda sembrada NO dispara el scrape en vivo — y existe ≥1
+  RetailerProduct SIN matchear (el amarrador Truper, real del fixture Algolia
+  de Construrama) con observación → la sección cruda es visible con seed;
 - una 2ª corrida es **idempotente**: no duplica filas ni cambia conteos.
 SQLite, sin Docker.
 """
 
+from datetime import timedelta
 from decimal import Decimal
 
 import pytest
 from django.core.management import call_command
+from django.utils import timezone
 
 from apps.catalog.models import CanonicalProduct, Category, RetailerProduct
 from apps.geo.models import Retailer, RetailerLocation, Zone, ZoneLocationMap
@@ -96,18 +102,17 @@ def test_seed_crea_el_grafo_de_la_spec():
         assert cp.mass_kg is not None
         assert cp.mass_kg > 0
 
-    # RetailerProduct por (canónico x retailer), matcheado manual.
-    assert RetailerProduct.objects.count() == canonicos.count() * 2
-    assert (
-        RetailerProduct.objects.filter(match_status=RetailerProduct.MatchStatus.MANUAL).count()
-        == RetailerProduct.objects.count()
-    )
-    for rp in RetailerProduct.objects.all():
+    # RetailerProduct por (canónico x retailer), matcheado manual, MÁS el crudo
+    # sin matchear de F033 (amarrador Truper).
+    assert RetailerProduct.objects.count() == canonicos.count() * 2 + 1
+    matcheados = RetailerProduct.objects.filter(match_status=RetailerProduct.MatchStatus.MANUAL)
+    assert matcheados.count() == canonicos.count() * 2
+    for rp in matcheados:
         assert rp.canonical_product is not None
         assert rp.external_sku
         assert rp.raw_name
         assert rp.url
-    # F031: HD lista por tonelada, Construrama por kg (ejerce la normalización).
+    # F031: HD lista por tonelada, Construrama (matcheado) por kg (normalización).
     assert (
         RetailerProduct.objects.filter(retailer=hd)
         .exclude(sale_unit=RetailerProduct.SaleUnit.TONELADA)
@@ -115,10 +120,7 @@ def test_seed_crea_el_grafo_de_la_spec():
         == 0
     )
     assert (
-        RetailerProduct.objects.filter(retailer=cr)
-        .exclude(sale_unit=RetailerProduct.SaleUnit.KG)
-        .count()
-        == 0
+        matcheados.filter(retailer=cr).exclude(sale_unit=RetailerProduct.SaleUnit.KG).count() == 0
     )
 
 
@@ -144,7 +146,39 @@ def test_seed_crea_historial_y_ultima_observacion():
         assert ultima.currency == "MXN"
         assert ultima.is_available is True
         assert ultima.source == PriceObservation.Source.XHR
-        assert ultima.raw_payload == {"seed": True}
+        assert ultima.raw_payload.get("seed") is True
+        # F033: la última observación es la FRESCA (captured_at ≈ ahora, dentro
+        # del TTL de 24 h): la búsqueda de términos sembrados no dispara el vivo.
+        assert ultima.raw_payload.get("fresh") is True
+        assert timezone.now() - ultima.captured_at < timedelta(hours=1)
+
+
+@pytest.mark.django_db
+def test_seed_siembra_crudo_sin_matchear_con_observacion():
+    """F033: existe ≥1 RP SIN canónico (amarrador Truper) con su observación.
+
+    Es el dato que hace visible la sección "resultados de las tiendas (sin
+    comparar)" de la búsqueda con datos sembrados (lo exige el E2E de F033).
+    """
+    call_command("seed")
+    zona = Zone.objects.get(slug="monterrey-metro")
+    cr = Retailer.objects.get(slug="construrama")
+
+    crudo = RetailerProduct.objects.get(external_sku="0204000086")
+    assert crudo.retailer == cr
+    assert crudo.canonical_product is None
+    assert crudo.match_status == RetailerProduct.MatchStatus.UNMATCHED
+    assert crudo.raw_name == "Truper, Amarrador De Varillas Con Grip, Pieza"
+    assert crudo.brand == "TRUPER"
+    assert crudo.sale_unit == RetailerProduct.SaleUnit.PIEZA
+    assert crudo.url.endswith("/p/0204000086")
+
+    obs = PriceObservation.objects.filter(retailer_product=crudo, zone=zona)
+    assert obs.count() >= 2  # historial + fresca
+    ultima = services.ultima_observacion(crudo, zona)
+    assert ultima.price == Decimal("125.00")
+    assert ultima.is_available is True
+    assert timezone.now() - ultima.captured_at < timedelta(hours=1)
 
 
 @pytest.mark.django_db
@@ -169,3 +203,11 @@ def test_seed_es_idempotente():
     assert hd_locs.get().external_id == "1333"
     # F029: el extra de routing se conserva idéntico tras re-sembrar (idempotente).
     assert hd_locs.get().extra == {"market_id": "10", "st_loc_id": "18503"}
+    # F033: ni el crudo sin matchear ni su observación FRESCA se duplican; la
+    # fresca se REFRESCA en sitio (marker raw_payload.fresh, no fila nueva).
+    assert RetailerProduct.objects.filter(external_sku="0204000086").count() == 1
+    for rp in RetailerProduct.objects.all():
+        assert (
+            PriceObservation.objects.filter(retailer_product=rp, raw_payload__fresh=True).count()
+            == 1
+        )

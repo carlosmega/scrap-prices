@@ -1,13 +1,20 @@
-"""Schemas de entrada/salida del catálogo (F015). El contrato vive aquí.
+"""Schemas de entrada/salida del catálogo (F015/F033). El contrato vive aquí.
 
 La frontera de la búsqueda: por cada `CanonicalProduct` que matchea `q`,
 `SearchResultOut` lleva el producto canónico y una lista de precios por retailer
 (`PriceByRetailerOut`) con el precio más fresco en la zona. Las shapes son las
 exactas de la spec F015; el router no inventa dicts.
+
+F033 (BREAKING): `/api/search` deja de responder una lista y responde
+`SearchOut`: los canónicos comparados (`results`, igual que antes), los
+hallazgos crudos por tienda aún sin matchear (`raw_results`) y la info de la
+corrida en vivo (`live`, null si no se disparó).
 """
 
 from datetime import datetime
 from decimal import Decimal
+from typing import Literal
+from uuid import UUID
 
 from ninja import Schema
 
@@ -66,6 +73,68 @@ class SearchResultOut(Schema):
 
     canonical_product: CanonicalProductRefOut
     prices: list[PriceByRetailerOut]
+
+
+class RawRetailerResultOut(Schema):
+    """Un hallazgo CRUDO de una tienda, aún sin matchear a un canónico (F033).
+
+    Es un `RetailerProduct` sin `canonical_product` cuyo `raw_name` matchea `q`
+    (acento-insensible), con su observación más fresca en la zona. El precio es
+    NATIVO en la unidad del retailer (`sale_unit`, None = desconocida): NO es
+    comparable cross-retailer hasta curarse en Admin (matching manual, PRD D1).
+    `price` va como float por contrato F033 (dato informativo, no monetario
+    exacto como los Decimal de `PriceByRetailerOut`).
+    """
+
+    retailer_slug: str
+    retailer_name: str
+    retailer_product_id: UUID
+    external_sku: str
+    raw_name: str
+    url: str | None = None
+    brand: str | None = None
+    sale_unit: str | None = None
+    price: float
+    currency: str = "MXN"
+    is_available: bool
+    captured_at: datetime
+
+
+class LiveRetailerStatusOut(Schema):
+    """Cómo le fue a UN retailer en la corrida en vivo (F033).
+
+    `detail` es un motivo breve legible (jamás un stacktrace): por qué se
+    bloqueó, falló u omitió. `ok` con `items_found=0` significa "consultado
+    con éxito pero sin hallazgos".
+    """
+
+    retailer_slug: str
+    status: Literal["ok", "failed", "blocked", "skipped"]
+    items_found: int = 0
+    detail: str | None = None
+
+
+class LiveSearchInfoOut(Schema):
+    """Info de la corrida en vivo que acompañó a la búsqueda (F033)."""
+
+    triggered: bool
+    duration_ms: int
+    retailers: list[LiveRetailerStatusOut]
+
+
+class SearchOut(Schema):
+    """Respuesta completa de `/api/search` (F033, BREAKING: lista → objeto).
+
+    - `results`: canónicos comparados (idéntico al contrato F015/F031).
+    - `raw_results`: hallazgos por tienda sin matchear (orden retailer →
+      precio asc, tope 50).
+    - `live`: info de la corrida en vivo; null si NO se disparó (datos frescos,
+      `live=never`, `q` corto o cooldown).
+    """
+
+    results: list[SearchResultOut]
+    raw_results: list[RawRetailerResultOut]
+    live: LiveSearchInfoOut | None = None
 
 
 class CanonicalProductDetailOut(Schema):

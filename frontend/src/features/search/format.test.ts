@@ -6,6 +6,7 @@ import {
   formatPrice,
   formatPricePerKg,
   formatPricePerPiece,
+  formatRawPrice,
   saleUnitLabel,
   sortPricesAsc,
 } from "./format";
@@ -97,6 +98,24 @@ describe("formatNativePrice", () => {
 
   it("devuelve null sin precio en la zona", () => {
     expect(formatNativePrice(null, "tonelada", "MXN")).toBeNull();
+  });
+});
+
+describe("formatRawPrice", () => {
+  it("formatea el precio nativo (number del contrato F033) con su unidad", () => {
+    expect(formatRawPrice(125, "pieza", "MXN")).toBe("$125.00 / pieza");
+  });
+
+  it("abrevia la unidad con saleUnitLabel (tonelada → ton)", () => {
+    expect(formatRawPrice(20085, "tonelada", "MXN")).toBe(
+      "$20,085.00 / ton"
+    );
+  });
+
+  it("omite la unidad cuando sale_unit es null o desconocida", () => {
+    expect(formatRawPrice(99.5, null, "MXN")).toBe("$99.50");
+    expect(formatRawPrice(99.5, undefined, "MXN")).toBe("$99.50");
+    expect(formatRawPrice(99.5, "", "MXN")).toBe("$99.50");
   });
 });
 

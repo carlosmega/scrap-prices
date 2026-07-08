@@ -28,7 +28,17 @@ class PriceObservationAdmin(admin.ModelAdmin):
 
 @admin.register(ScrapeRun)
 class ScrapeRunAdmin(admin.ModelAdmin):
-    list_display = ("retailer", "zone", "status", "items_found", "started_at")
-    list_filter = ("status", "retailer")
-    search_fields = ("retailer__name",)
+    # F033: `triggered_by`/`search_term` distinguen las corridas del comando de
+    # las disparadas por la búsqueda en vivo (auditoría del gatillo y cooldown).
+    list_display = (
+        "retailer",
+        "zone",
+        "status",
+        "items_found",
+        "triggered_by",
+        "search_term",
+        "started_at",
+    )
+    list_filter = ("status", "retailer", "triggered_by")
+    search_fields = ("retailer__name", "search_term")
     ordering = ("-started_at",)

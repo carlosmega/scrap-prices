@@ -148,6 +148,20 @@
               "type": "string"
             },
             "required": false
+          },
+          {
+            "in": "query",
+            "name": "live",
+            "schema": {
+              "default": "auto",
+              "enum": [
+                "auto",
+                "never"
+              ],
+              "title": "Live",
+              "type": "string"
+            },
+            "required": false
           }
         ],
         "responses": {
@@ -156,17 +170,13 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/SearchResultOut"
-                  },
-                  "title": "Response",
-                  "type": "array"
+                  "$ref": "#/components/schemas/SearchOut"
                 }
               }
             }
           }
         },
-        "description": "Busca canónicos por `q` con su precio más fresco por retailer en la zona.\n\n404 si `zone_id` no existe o está inactiva (el service devuelve None).",
+        "description": "Busca `q` en la zona: canónicos comparados + crudos por tienda (F033).\n\nBREAKING F033: la respuesta pasa de lista a objeto (`SearchOut`). Con\n`live=auto` (default), si no hay datos frescos para `q`+zona el service\nconsulta ambos retailers EN VIVO (puede tardar hasta ~25 s), ingesta y\nresponde; `live=never` desactiva el vivo. 404 si `zone_id` no existe o\nestá inactiva (el service devuelve None).",
         "tags": [
           "catalog"
         ]
@@ -773,6 +783,74 @@
         "title": "CanonicalProductRefOut",
         "type": "object"
       },
+      "LiveRetailerStatusOut": {
+        "description": "Cómo le fue a UN retailer en la corrida en vivo (F033).\n\n`detail` es un motivo breve legible (jamás un stacktrace): por qué se\nbloqueó, falló u omitió. `ok` con `items_found=0` significa \"consultado\ncon éxito pero sin hallazgos\".",
+        "properties": {
+          "retailer_slug": {
+            "title": "Retailer Slug",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "failed",
+              "blocked",
+              "skipped"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "items_found": {
+            "default": 0,
+            "title": "Items Found",
+            "type": "integer"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          }
+        },
+        "required": [
+          "retailer_slug",
+          "status"
+        ],
+        "title": "LiveRetailerStatusOut",
+        "type": "object"
+      },
+      "LiveSearchInfoOut": {
+        "description": "Info de la corrida en vivo que acompañó a la búsqueda (F033).",
+        "properties": {
+          "triggered": {
+            "title": "Triggered",
+            "type": "boolean"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "retailers": {
+            "items": {
+              "$ref": "#/components/schemas/LiveRetailerStatusOut"
+            },
+            "title": "Retailers",
+            "type": "array"
+          }
+        },
+        "required": [
+          "triggered",
+          "duration_ms",
+          "retailers"
+        ],
+        "title": "LiveSearchInfoOut",
+        "type": "object"
+      },
       "PriceByRetailerOut": {
         "description": "Precio más fresco de un retailer para un canónico en una zona.\n\n`price`/`captured_at` son None cuando el retailer no tiene observación en la\nzona (entonces `is_available=False`). `price` se serializa como string del\nDecimal para no perder exactitud monetaria (PRD §8).\n\nF031: `price` es el valor NATIVO del retailer (transparencia: \"listado a\n$X/ton\"); `sale_unit` es su unidad estructurada (`\"\"` = desconocida). La\ncomparación cross-retailer usa los campos NORMALIZADOS `price_per_piece`\n(titular de obra) y `price_per_kg` (base de orden/menor-precio). Cualquiera\nde los dos es None cuando no se puede normalizar (falta `mass_kg`, unidad\ndesconocida o sin precio en la zona). También como string Decimal.",
         "properties": {
@@ -859,6 +937,95 @@
         "title": "PriceByRetailerOut",
         "type": "object"
       },
+      "RawRetailerResultOut": {
+        "description": "Un hallazgo CRUDO de una tienda, aún sin matchear a un canónico (F033).\n\nEs un `RetailerProduct` sin `canonical_product` cuyo `raw_name` matchea `q`\n(acento-insensible), con su observación más fresca en la zona. El precio es\nNATIVO en la unidad del retailer (`sale_unit`, None = desconocida): NO es\ncomparable cross-retailer hasta curarse en Admin (matching manual, PRD D1).\n`price` va como float por contrato F033 (dato informativo, no monetario\nexacto como los Decimal de `PriceByRetailerOut`).",
+        "properties": {
+          "retailer_slug": {
+            "title": "Retailer Slug",
+            "type": "string"
+          },
+          "retailer_name": {
+            "title": "Retailer Name",
+            "type": "string"
+          },
+          "retailer_product_id": {
+            "format": "uuid",
+            "title": "Retailer Product Id",
+            "type": "string"
+          },
+          "external_sku": {
+            "title": "External Sku",
+            "type": "string"
+          },
+          "raw_name": {
+            "title": "Raw Name",
+            "type": "string"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "sale_unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sale Unit"
+          },
+          "price": {
+            "title": "Price",
+            "type": "number"
+          },
+          "currency": {
+            "default": "MXN",
+            "title": "Currency",
+            "type": "string"
+          },
+          "is_available": {
+            "title": "Is Available",
+            "type": "boolean"
+          },
+          "captured_at": {
+            "format": "date-time",
+            "title": "Captured At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "retailer_slug",
+          "retailer_name",
+          "retailer_product_id",
+          "external_sku",
+          "raw_name",
+          "price",
+          "is_available",
+          "captured_at"
+        ],
+        "title": "RawRetailerResultOut",
+        "type": "object"
+      },
       "RetailerRefOut": {
         "description": "Referencia mínima a un retailer dentro de un precio.",
         "properties": {
@@ -876,6 +1043,41 @@
           "name"
         ],
         "title": "RetailerRefOut",
+        "type": "object"
+      },
+      "SearchOut": {
+        "description": "Respuesta completa de `/api/search` (F033, BREAKING: lista → objeto).\n\n- `results`: canónicos comparados (idéntico al contrato F015/F031).\n- `raw_results`: hallazgos por tienda sin matchear (orden retailer →\n  precio asc, tope 50).\n- `live`: info de la corrida en vivo; null si NO se disparó (datos frescos,\n  `live=never`, `q` corto o cooldown).",
+        "properties": {
+          "results": {
+            "items": {
+              "$ref": "#/components/schemas/SearchResultOut"
+            },
+            "title": "Results",
+            "type": "array"
+          },
+          "raw_results": {
+            "items": {
+              "$ref": "#/components/schemas/RawRetailerResultOut"
+            },
+            "title": "Raw Results",
+            "type": "array"
+          },
+          "live": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/LiveSearchInfoOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "results",
+          "raw_results"
+        ],
+        "title": "SearchOut",
         "type": "object"
       },
       "SearchResultOut": {

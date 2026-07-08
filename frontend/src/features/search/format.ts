@@ -95,6 +95,23 @@ export function formatNativePrice(
 }
 
 /**
+ * Precio NATIVO de un hallazgo crudo (F033): `RawRetailerResultOut.price`
+ * llega como number (float informativo del contrato, no el Decimal-string de
+ * los canónicos) → "$125.00 / pieza". Sin `sale_unit` (null/"" desconocida) se
+ * omite la unidad en vez de inventarla (transparencia, RNF3). NO es comparable
+ * cross-retailer: eso llega al curarse el matching en Admin (PRD D1).
+ */
+export function formatRawPrice(
+  price: number,
+  saleUnit: string | null | undefined,
+  currency: string,
+): string {
+  const amount = formatPrice(String(price), currency);
+  const unit = saleUnit ? saleUnitLabel(saleUnit) : "";
+  return unit ? `${amount} / ${unit}` : amount;
+}
+
+/**
  * Ordena los precios por retailer para la comparación cross-retailer (F031):
  * la base es `price_per_kg` ASCENDENTE (la unidad común y justa), NO el `price`
  * nativo crudo (que mezcla ton/kg/pieza y no es comparable). Los que no tienen

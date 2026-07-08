@@ -10,6 +10,8 @@ Incluye:
 from datetime import UTC, datetime
 from decimal import ROUND_HALF_UP, Decimal
 
+from django.utils import timezone
+
 from apps.catalog.models import CanonicalProduct, Category, RetailerProduct
 from apps.core.schemas import HealthOut
 from apps.geo.models import Retailer, RetailerLocation, Zone, ZoneLocationMap
@@ -89,15 +91,74 @@ _VARILLAS = [
 
 # Tres capturas historicas (de mas antigua a mas reciente). F031: el precio crece
 # MULTIPLICATIVAMENTE (factor sobre el base, cuantizado 2dp) para ser agnostico a
-# la unidad nativa; la ultima captura (×1.030) es inequivocamente la mas alta.
+# la unidad nativa.
 _CAPTURAS = [
     {"captured_at": datetime(2026, 5, 30, 9, 0, tzinfo=UTC), "factor": Decimal("1.000")},
     {"captured_at": datetime(2026, 6, 6, 9, 0, tzinfo=UTC), "factor": Decimal("1.015")},
     {"captured_at": datetime(2026, 6, 13, 9, 0, tzinfo=UTC), "factor": Decimal("1.030")},
 ]
 
+# F033: factor de la captura FRESCA (captured_at = ahora). Igual al de la última
+# captura fija (×1.030): el precio "vigente" no cambia respecto a F031, solo su
+# frescura. Con datos frescos la búsqueda NO dispara el scrape en vivo (TTL 24h)
+# — clave para que la demo sembrada y el E2E sigan siendo 100% OFFLINE.
+_FACTOR_FRESCO = Decimal("1.030")
+
 # Cuantizacion monetaria del historial multiplicativo: 2 decimales, ROUND_HALF_UP.
 _CENTAVOS = Decimal("0.01")
+
+# --- Producto crudo SIN matchear (F033) --------------------------------------
+# Hallazgo REAL de Construrama (hit del golden fixture Algolia): el amarrador de
+# varillas Truper. Se siembra SIN canónico (match_status unmatched) para que la
+# sección "resultados de las tiendas (sin comparar)" de la búsqueda sea visible
+# con datos sembrados (su raw_name matchea "varilla"). El matching manual en
+# Admin (PRD D1) es lo que lo promovería a la comparación canónica.
+_CRUDO_CONSTRURAMA = {
+    "external_sku": "0204000086",
+    "raw_name": "Truper, Amarrador De Varillas Con Grip, Pieza",
+    "url": (
+        "https://www.construrama.com/catalogo/aceros/varilla/varilla/"
+        "truper-amarrador-de-varillas-con-grip-pieza/p/0204000086"
+    ),
+    "brand": "TRUPER",
+    "unit_raw": "Pieza",
+    "sale_unit": RetailerProduct.SaleUnit.PIEZA,
+    "precio": Decimal("125.00"),
+}
+
+
+def _sembrar_observacion_fresca(rp, zona, location, precio) -> bool:
+    """Siembra/refresca la observación FRESCA (captured_at=ahora) de un RP.
+
+    Idempotente sin duplicar: la fila se identifica por el marker
+    `raw_payload.fresh` (la clave natural (rp, zona, captured_at) no sirve
+    porque captured_at es "ahora" y cambia por corrida). Re-sembrar ACTUALIZA
+    esa misma fila (refresca captured_at/price) en vez de crear otra. Devuelve
+    True si la creó. Es un artificio de LA DEMO: las corridas reales de
+    scraping siguen siendo append-only (nunca sobrescriben).
+    """
+    ahora = timezone.now()
+    existente = PriceObservation.objects.filter(
+        retailer_product=rp, zone=zona, raw_payload__fresh=True
+    ).first()
+    if existente is None:
+        PriceObservation.objects.create(
+            retailer_product=rp,
+            zone=zona,
+            retailer_location=location,
+            price=precio,
+            currency="MXN",
+            is_available=True,
+            source=PriceObservation.Source.XHR,
+            captured_at=ahora,
+            raw_payload={"seed": True, "fresh": True},
+        )
+        return True
+    existente.retailer_location = location
+    existente.price = precio
+    existente.captured_at = ahora
+    existente.save(update_fields=["retailer_location", "price", "captured_at", "updated_at"])
+    return False
 
 
 def seed_demo() -> dict[str, int]:
@@ -229,9 +290,9 @@ def seed_demo() -> dict[str, int]:
                 },
             )
             base = Decimal(varilla["precios"][slug])
+            location = hd_loc if slug == "home-depot" else cr_loc
             for captura in _CAPTURAS:
-                # Historial multiplicativo: base × factor, cuantizado a 2dp. La
-                # ultima captura (×1.030) es la mas reciente y la mas alta.
+                # Historial multiplicativo: base × factor, cuantizado a 2dp.
                 precio = (base * captura["factor"]).quantize(_CENTAVOS, rounding=ROUND_HALF_UP)
                 # Clave natural: (retailer_product, zona, captured_at) -> sin duplicar.
                 _, creada = PriceObservation.objects.update_or_create(
@@ -239,7 +300,7 @@ def seed_demo() -> dict[str, int]:
                     zone=zona,
                     captured_at=captura["captured_at"],
                     defaults={
-                        "retailer_location": (hd_loc if slug == "home-depot" else cr_loc),
+                        "retailer_location": location,
                         "price": precio,
                         "currency": "MXN",
                         "is_available": True,
@@ -249,6 +310,47 @@ def seed_demo() -> dict[str, int]:
                 )
                 if creada:
                     obs_count += 1
+            # F033: captura FRESCA (captured_at=ahora, mismo precio vigente
+            # ×1.030) para que la búsqueda de los términos sembrados NO dispare
+            # el scrape en vivo (TTL 24h) — demo y E2E siguen offline.
+            precio_fresco = (base * _FACTOR_FRESCO).quantize(_CENTAVOS, rounding=ROUND_HALF_UP)
+            if _sembrar_observacion_fresca(rp, zona, location, precio_fresco):
+                obs_count += 1
+
+    # F033: producto crudo SIN matchear (real, del fixture de Construrama) con
+    # historial + observación fresca: hace visible la sección de resultados por
+    # tienda ("sin comparar") de la búsqueda con datos sembrados.
+    crudo, _ = RetailerProduct.objects.update_or_create(
+        retailer=cr,
+        external_sku=_CRUDO_CONSTRURAMA["external_sku"],
+        defaults={
+            "raw_name": _CRUDO_CONSTRURAMA["raw_name"],
+            "url": _CRUDO_CONSTRURAMA["url"],
+            "brand": _CRUDO_CONSTRURAMA["brand"],
+            "unit_raw": _CRUDO_CONSTRURAMA["unit_raw"],
+            "sale_unit": _CRUDO_CONSTRURAMA["sale_unit"],
+            "canonical_product": None,
+            "match_status": RetailerProduct.MatchStatus.UNMATCHED,
+            "match_confidence": None,
+        },
+    )
+    _, creada = PriceObservation.objects.update_or_create(
+        retailer_product=crudo,
+        zone=zona,
+        captured_at=_CAPTURAS[-1]["captured_at"],
+        defaults={
+            "retailer_location": cr_loc,
+            "price": _CRUDO_CONSTRURAMA["precio"],
+            "currency": "MXN",
+            "is_available": True,
+            "source": PriceObservation.Source.XHR,
+            "raw_payload": {"seed": True},
+        },
+    )
+    if creada:
+        obs_count += 1
+    if _sembrar_observacion_fresca(crudo, zona, cr_loc, _CRUDO_CONSTRURAMA["precio"]):
+        obs_count += 1
 
     return {
         "retailers": Retailer.objects.count(),

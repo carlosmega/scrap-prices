@@ -357,6 +357,10 @@ def test_command_corrida_real_construrama_crea_observations(cr_setup, monkeypatc
     run = ScrapeRun.objects.get(retailer=cr_setup["retailer"])
     assert run.status == ScrapeRun.Status.OK
     assert run.items_found == 7
+    # F033: el comando sigue auditando su origen como 'command' (default),
+    # sin término de búsqueda (search_term null; eso es del vivo).
+    assert run.triggered_by == ScrapeRun.TriggeredBy.COMMAND
+    assert run.search_term is None
 
 
 # --- (7) integración seed↔comando real (regresión del review F026) ----------

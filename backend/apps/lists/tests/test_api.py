@@ -102,7 +102,9 @@ def test_flujo_completo_crear_items_editar_quitar_detalle_borrar(client, seeded)
     }
     assert item1["retailer"]["slug"] == "home-depot"
     assert item1["captured_price"] == "20085.00"
-    assert item1["captured_at"].startswith("2026-06-13")
+    # F033: la última observación del seed es la FRESCA (captured_at ≈ ahora),
+    # no la fija de 2026-06-13; el snapshot debe tomarla.
+    assert item1["captured_at"] > "2026-06-13"
     assert item1["line_total"] == "200850.00"
 
     # Agregar ítem 2 (CR, 2 piezas). Snapshot = última observación NATIVA seed
@@ -272,9 +274,7 @@ def test_scoping_sesion_b_no_modifica_item_de_a(client, seeded):
         headers=HDR_A,
     ).json()["id"]
 
-    r = client.patch(
-        f"/lists/{list_id}/items/{item_id}", json={"quantity": 99}, headers=HDR_B
-    )
+    r = client.patch(f"/lists/{list_id}/items/{item_id}", json={"quantity": 99}, headers=HDR_B)
     assert r.status_code == 404
     r = client.delete(f"/lists/{list_id}/items/{item_id}", headers=HDR_B)
     assert r.status_code == 404
@@ -355,9 +355,7 @@ def test_patch_item_quantity_invalida_es_422(client, seeded):
         json={"retailer_product_id": str(sku_hd.id), "quantity": 1},
         headers=HDR_A,
     ).json()["id"]
-    r = client.patch(
-        f"/lists/{list_id}/items/{item_id}", json={"quantity": 0}, headers=HDR_A
-    )
+    r = client.patch(f"/lists/{list_id}/items/{item_id}", json={"quantity": 0}, headers=HDR_A)
     assert r.status_code == 422
 
 

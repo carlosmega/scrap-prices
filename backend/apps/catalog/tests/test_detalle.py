@@ -71,8 +71,9 @@ def test_detalle_canonico_con_prices_y_history(client, seeded):
     # history: no vacío, cada punto con su retailer, orden -captured_at.
     history = data["history"]
     assert len(history) > 0
-    # El seed tiene 3 capturas por retailer (2 retailers) = 6 puntos.
-    assert len(history) == 6
+    # El seed tiene 4 capturas por retailer (3 fijas + la FRESCA de F033) × 2
+    # retailers = 8 puntos.
+    assert len(history) == 8
     primer_punto = history[0]
     # F031: cada punto del historial gana `sale_unit` (etiqueta de unidad nativa).
     assert set(primer_punto.keys()) == {
@@ -88,8 +89,11 @@ def test_detalle_canonico_con_prices_y_history(client, seeded):
 
     capturas = [p["captured_at"] for p in history]
     assert capturas == sorted(capturas, reverse=True)
-    # La captura más reciente del seed es 2026-06-13.
-    assert history[0]["captured_at"].startswith("2026-06-13")
+    # F033: la captura más reciente del seed es la FRESCA (captured_at ≈ ahora,
+    # así los términos sembrados no disparan el scrape en vivo); las fijas del
+    # historial (2026-06-13, -06-06, -05-30) van detrás.
+    assert any(c.startswith("2026-06-13") for c in capturas)
+    assert history[0]["captured_at"] > "2026-06-13"
 
 
 @pytest.mark.django_db

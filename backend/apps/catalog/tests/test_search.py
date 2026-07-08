@@ -1,16 +1,24 @@
-"""Tests de la API de búsqueda (F015): GET /search.
+"""Tests de la API de búsqueda (F015/F033): GET /search.
 
 Cubre los criterios de la spec: happy path (varilla en Monterrey con Home Depot
 y Construrama, ambos con precio + captured_at usando la ÚLTIMA observación),
 orden por precio, retailer sin observación → price null / is_available False,
 zona inexistente/inactiva → 404 y tolerancia a acentos. Datos del `seed`
 (idempotente) y casos extra con ORM para que sean deterministas. SQLite.
+
+F033 (BREAKING): la respuesta pasa de lista a objeto `SearchOut`
+(`results` + `raw_results` + `live`). Estos tests verifican la búsqueda servida
+de la DB: el seed deja observaciones FRESCAS, así que `live` es null (no se
+dispara el vivo); el disparo en vivo se cubre en `test_live_search.py`. La
+única query sin datos ("portland") usa `live=never` explícito.
 """
 
+from datetime import datetime, timedelta
 from decimal import Decimal
 
 import pytest
 from django.core.management import call_command
+from django.utils import timezone
 from ninja.testing import TestClient
 
 from apps.catalog.api import router
@@ -34,6 +42,12 @@ def seeded(db):
     return {"zona": zona, "hd": hd, "cr": cr}
 
 
+def _results(response) -> list[dict]:
+    """Extrae los canónicos comparados del objeto SearchOut (F033)."""
+    assert response.status_code == 200
+    return response.json()["results"]
+
+
 @pytest.mark.django_db
 def test_busqueda_varilla_en_mty_con_ambos_retailers(client, seeded):
     """GET /search?q=varilla&zone_id=<MTY> devuelve varillas con HD y CR + frescura."""
@@ -41,9 +55,16 @@ def test_busqueda_varilla_en_mty_con_ambos_retailers(client, seeded):
     response = client.get(f"/search?q=varilla&zone_id={zona.id}")
 
     assert response.status_code == 200
-    data = response.json()
+    body = response.json()
+    # F033: respuesta objeto (BREAKING): canónicos + crudos + info del vivo.
+    assert set(body.keys()) == {"results", "raw_results", "live"}
+    # El seed deja datos FRESCOS → la corrida en vivo NO se dispara.
+    assert body["live"] is None
+    data = body["results"]
     # El seed tiene 3 varillas canónicas.
     assert len(data) == 3
+    # F033: la sección cruda trae el hallazgo sembrado sin matchear (Truper).
+    assert [c["external_sku"] for c in body["raw_results"]] == ["0204000086"]
 
     item = data[0]
     assert set(item.keys()) == {"canonical_product", "prices"}
@@ -92,20 +113,23 @@ def test_usa_la_ultima_observacion_por_retailer_y_zona(client, seeded):
     """El precio devuelto es el NATIVO de la observación MÁS reciente (captured_at)."""
     zona = seeded["zona"]
     # F031: para el canónico de 3/8 (#3), el seed pone HD base 19500.00/ton y CR
-    # 20.90/kg; la última captura (2026-06-13) aplica ×1.030 → HD 20085.00/ton,
-    # CR 21.53/kg (precios NATIVOS en cada unidad).
+    # 20.90/kg; la captura vigente aplica ×1.030 → HD 20085.00/ton, CR 21.53/kg
+    # (precios NATIVOS en cada unidad). F033: esa captura vigente es FRESCA
+    # (captured_at = ahora, la siembra `_sembrar_observacion_fresca`).
     canonico = CanonicalProduct.objects.get(name__startswith="Varilla corrugada 3/8")
     response = client.get(f"/search?q=3/8&zone_id={zona.id}")
 
-    assert response.status_code == 200
-    data = response.json()
+    data = _results(response)
     item = next(i for i in data if i["canonical_product"]["id"] == str(canonico.id))
     por_slug = {p["retailer"]["slug"]: p for p in item["prices"]}
     assert por_slug["home-depot"]["price"] == "20085.00"
     assert por_slug["home-depot"]["sale_unit"] == "tonelada"
     assert por_slug["construrama"]["price"] == "21.53"
     assert por_slug["construrama"]["sale_unit"] == "kg"
-    assert por_slug["home-depot"]["captured_at"].startswith("2026-06-13")
+    # La última observación es la fresca del seed (hace instantes, no la fija
+    # de 2026-06-13): así la búsqueda sembrada no dispara el vivo (F033).
+    capturado = datetime.fromisoformat(por_slug["home-depot"]["captured_at"])
+    assert timezone.now() - capturado < timedelta(hours=1)
     # Normalizado: HD 20085/ton → 20.09/kg; CR 21.53/kg directo.
     assert por_slug["home-depot"]["price_per_kg"] == "20.09"
     assert por_slug["construrama"]["price_per_kg"] == "21.53"
@@ -117,8 +141,7 @@ def test_orden_por_precio_menor_primero(client, seeded):
     zona = seeded["zona"]
     response = client.get(f"/search?q=varilla&zone_id={zona.id}&sort=price")
 
-    assert response.status_code == 200
-    data = response.json()
+    data = _results(response)
 
     def menor_por_kg(item):
         return min(
@@ -139,10 +162,8 @@ def test_para_varilla_4_home_depot_es_menor_por_kg_aunque_nativo_mayor(client, s
     canonico = CanonicalProduct.objects.get(name__startswith="Varilla corrugada 1/2")
     response = client.get(f"/search?q=1/2&zone_id={zona.id}")
 
-    assert response.status_code == 200
-    item = next(
-        i for i in response.json() if i["canonical_product"]["id"] == str(canonico.id)
-    )
+    data = _results(response)
+    item = next(i for i in data if i["canonical_product"]["id"] == str(canonico.id))
     por_slug = {p["retailer"]["slug"]: p for p in item["prices"]}
 
     hd, cr = por_slug["home-depot"], por_slug["construrama"]
@@ -162,8 +183,7 @@ def test_orden_por_nombre(client, seeded):
     zona = seeded["zona"]
     response = client.get(f"/search?q=varilla&zone_id={zona.id}&sort=name")
 
-    assert response.status_code == 200
-    nombres = [i["canonical_product"]["name"] for i in response.json()]
+    nombres = [i["canonical_product"]["name"] for i in _results(response)]
     assert nombres == sorted(nombres)
 
 
@@ -179,10 +199,8 @@ def test_retailer_sin_observacion_price_null_no_disponible(client, seeded):
 
     response = client.get(f"/search?q=1/2&zone_id={zona.id}")
 
-    assert response.status_code == 200
-    item = next(
-        i for i in response.json() if i["canonical_product"]["id"] == str(canonico.id)
-    )
+    data = _results(response)
+    item = next(i for i in data if i["canonical_product"]["id"] == str(canonico.id))
     por_slug = {p["retailer"]["slug"]: p for p in item["prices"]}
     # Construrama aparece pero sin precio ni frescura.
     assert por_slug["construrama"]["price"] is None
@@ -216,8 +234,8 @@ def test_zona_inactiva_responde_404(client, seeded):
 def test_busqueda_tolerante_a_acentos(client, seeded):
     """'várilla' (con acento) encuentra los mismos resultados que 'varilla'."""
     zona = seeded["zona"]
-    sin_acento = client.get(f"/search?q=varilla&zone_id={zona.id}").json()
-    con_acento = client.get(f"/search?q=várilla&zone_id={zona.id}").json()
+    sin_acento = _results(client.get(f"/search?q=varilla&zone_id={zona.id}"))
+    con_acento = _results(client.get(f"/search?q=várilla&zone_id={zona.id}"))
 
     assert len(con_acento) == len(sin_acento) == 3
     ids_con = {i["canonical_product"]["id"] for i in con_acento}
@@ -235,8 +253,9 @@ def test_acento_en_el_nombre_del_canonico(client, seeded):
         unit=CanonicalProduct.Unit.SACO,
     )
 
-    response = client.get(f"/search?q=portland&zone_id={zona.id}")
+    # live=never: este canónico recién creado NO tiene observaciones (sin datos
+    # frescos dispararía el vivo, F033); aquí solo se prueba el matcheo de DB.
+    response = client.get(f"/search?q=portland&zone_id={zona.id}&live=never")
 
-    assert response.status_code == 200
-    ids = {i["canonical_product"]["id"] for i in response.json()}
+    ids = {i["canonical_product"]["id"] for i in _results(response)}
     assert str(canonico.id) in ids

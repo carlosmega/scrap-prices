@@ -12,7 +12,14 @@ import { apiGetQuery } from "@/lib/api/client";
 export type SearchSort = "price" | "name";
 
 /**
- * Busca canónicos por texto en una zona y devuelve `SearchResultOut[]`.
+ * Busca por texto en una zona y devuelve el `SearchOut` completo (F033):
+ * canónicos comparados (`results`) + hallazgos crudos por tienda
+ * (`raw_results`) + info de la corrida en vivo (`live`).
+ *
+ * No se manda `live`: aplica el default del contrato (`auto`) — si no hay
+ * datos frescos para término+zona, el backend consulta las tiendas EN VIVO y
+ * la petición puede tardar varios segundos (~2–25 s). Por eso el cliente HTTP
+ * no impone timeout y la UI muestra un mensaje progresivo mientras espera.
  *
  * @param q      término de búsqueda (p.ej. "varilla").
  * @param zoneId id de la zona seleccionada (F019).

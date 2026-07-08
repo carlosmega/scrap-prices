@@ -77,12 +77,22 @@ class PriceObservation(TimeStampedUUIDModel):
 
 
 class ScrapeRun(TimeStampedUUIDModel):
-    """Auditoría de una corrida de scraping (D2 del PRD: monitorear corridas)."""
+    """Auditoría de una corrida de scraping (D2 del PRD: monitorear corridas).
+
+    F033: una corrida puede nacer del comando `scrape` (`triggered_by="command"`,
+    default) o de la búsqueda en vivo bajo demanda (`triggered_by="search"`), en
+    cuyo caso `search_term` registra el término normalizado que la disparó. El
+    cooldown del gatillo (término+zona+retailer) se calcula sobre estos campos.
+    """
 
     class Status(models.TextChoices):
         OK = "ok", "Correcta"
         PARTIAL = "partial", "Parcial"
         FAILED = "failed", "Fallida"
+
+    class TriggeredBy(models.TextChoices):
+        COMMAND = "command", "Comando"
+        SEARCH = "search", "Búsqueda en vivo"
 
     retailer = models.ForeignKey(
         Retailer,
@@ -101,6 +111,19 @@ class ScrapeRun(TimeStampedUUIDModel):
     status = models.CharField(max_length=16, choices=Status.choices)
     items_found = models.PositiveIntegerField(default=0)
     errors = models.JSONField(default=list, blank=True)
+    # F033: término de búsqueda normalizado que disparó la corrida en vivo.
+    # null (no "") en corridas SIN término (las del comando): distingue "no
+    # aplica" de "término vacío" — por eso el noqa de DJ001 es deliberado.
+    search_term = models.CharField(  # noqa: DJ001 — null = "sin término" (spec F033)
+        max_length=200,
+        null=True,
+        blank=True,
+    )
+    triggered_by = models.CharField(
+        max_length=16,
+        choices=TriggeredBy.choices,
+        default=TriggeredBy.COMMAND,
+    )
 
     class Meta:
         ordering = ["-started_at"]

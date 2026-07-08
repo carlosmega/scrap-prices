@@ -221,6 +221,6 @@
     "titulo": "Busqueda en vivo bajo demanda (live-on-miss cache-through): sin datos frescos -> scrape HD+Construrama en el request, ingesta y muestra crudos por tienda (pivote de producto 2026-07-07)",
     "capas": ["backend", "frontend", "e2e"],
     "spec": "specs/F033-busqueda-en-vivo.md",
-    "status": "in_progress"
+    "status": "done"
   }
 ]

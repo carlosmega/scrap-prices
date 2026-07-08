@@ -1,33 +1,41 @@
 """Router de Ninja del catálogo: SOLO parseo, validación y delegación.
 
 Ninguna llamada al ORM aquí (regla de capas, ver docs/conventions-backend.md):
-la búsqueda, el ensamblado de precios y el orden viven en services.py.
+la búsqueda, el ensamblado de precios, el orden y la orquestación de la
+búsqueda EN VIVO (F033: gatillo, adapters, ingestión) viven en services.
 """
+
+from typing import Literal
 
 from ninja import Query, Router
 from ninja.errors import HttpError
 
 from apps.catalog import services
-from apps.catalog.schemas import ProductDetailOut, SearchResultOut
+from apps.catalog.schemas import ProductDetailOut, SearchOut
 
 router = Router(tags=["catalog"])
 
 
-@router.get("/search", response=list[SearchResultOut])
+@router.get("/search", response=SearchOut)
 def buscar(
     request,
     q: str = Query(...),
     zone_id: str = Query(...),
     sort: str = Query("price"),
+    live: Literal["auto", "never"] = Query("auto"),
 ):
-    """Busca canónicos por `q` con su precio más fresco por retailer en la zona.
+    """Busca `q` en la zona: canónicos comparados + crudos por tienda (F033).
 
-    404 si `zone_id` no existe o está inactiva (el service devuelve None).
+    BREAKING F033: la respuesta pasa de lista a objeto (`SearchOut`). Con
+    `live=auto` (default), si no hay datos frescos para `q`+zona el service
+    consulta ambos retailers EN VIVO (puede tardar hasta ~25 s), ingesta y
+    responde; `live=never` desactiva el vivo. 404 si `zone_id` no existe o
+    está inactiva (el service devuelve None).
     """
-    resultados = services.buscar(q=q, zone_id=zone_id, sort=sort)
-    if resultados is None:
+    resultado = services.buscar(q=q, zone_id=zone_id, sort=sort, live=live)
+    if resultado is None:
         raise HttpError(404, "zona no encontrada")
-    return resultados
+    return resultado
 
 
 @router.get("/products/{id}", response=ProductDetailOut)

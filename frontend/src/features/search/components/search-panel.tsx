@@ -1,12 +1,18 @@
 "use client";
 
 /**
- * Panel de búsqueda (Client Component) — corazón de F020.
+ * Panel de búsqueda (Client Component) — corazón de F020 + F033.
  *
  * Toma la zona de `useSelectedZone()` (F019) como `zone_id`. Si NO hay zona,
  * invita a elegirla y no busca. Con zona, ejerce `GET /api/search` vía
  * `useSearch` y renderiza los cinco estados: inicial / cargando / error / vacío
  * / datos. Incluye el control para ordenar por precio (menor primero, B1·CA4).
+ *
+ * F033: la respuesta trae tres partes y el panel las compone en este orden:
+ * badge de corrida en vivo (si `live.triggered`), canónicos comparados
+ * ($/kg F031, intactos) y la sección "Resultados de las tiendas (sin
+ * comparar)" agrupada por retailer. El estado cargando es progresivo
+ * (`SearchProgress`): tras ~1.5 s avisa que se consulta en vivo.
  *
  * `"use client"` vive aquí (lo más abajo posible): la home sigue siendo Server
  * Component y solo compone este organismo debajo del selector de zona.
@@ -26,7 +32,10 @@ import { Input } from "@/components/ui/input";
 import { useSelectedZone } from "@/features/zones/hooks/use-selected-zone";
 import type { SearchSort } from "../api";
 import { useSearch } from "../hooks/use-search";
+import { LiveRunBadge } from "./live-run-badge";
+import { RawResultsSection } from "./raw-results-section";
 import { ResultCard } from "./result-card";
+import { SearchProgress } from "./search-progress";
 
 const SORT_OPTIONS: ReadonlyArray<{ value: SearchSort; label: string }> = [
   { value: "price", label: "Precio (menor primero)" },
@@ -127,20 +136,7 @@ export function SearchPanel() {
           </p>
         )}
 
-        {state.status === "loading" && (
-          <p
-            className="flex items-center gap-2 text-sm text-muted-foreground"
-            role="status"
-            aria-live="polite"
-            data-testid="search-loading"
-          >
-            <span
-              aria-hidden
-              className="size-2 animate-pulse rounded-full bg-muted-foreground"
-            />
-            Buscando…
-          </p>
-        )}
+        {state.status === "loading" && <SearchProgress />}
 
         {state.status === "error" && (
           <p
@@ -156,25 +152,46 @@ export function SearchPanel() {
         )}
 
         {state.status === "empty" && (
-          <p
-            className="text-sm text-muted-foreground"
-            role="status"
-            aria-live="polite"
-            data-testid="search-empty"
-          >
-            Sin resultados para tu búsqueda.
-          </p>
+          <div className="flex flex-col gap-3">
+            {state.live !== null && <LiveRunBadge live={state.live} />}
+            <p
+              className="text-sm text-muted-foreground"
+              role="status"
+              aria-live="polite"
+              data-testid="search-empty"
+            >
+              Sin resultados para tu búsqueda.
+            </p>
+          </div>
         )}
 
         {state.status === "ready" && (
-          <div className="flex flex-col gap-3" data-testid="search-results">
-            {state.results.map((result) => (
-              <ResultCard
-                key={result.canonical_product.id}
-                result={result}
-                zoneId={zoneId}
-              />
-            ))}
+          <div className="flex flex-col gap-4">
+            {state.live !== null && <LiveRunBadge live={state.live} />}
+
+            {state.results.length > 0 ? (
+              <div className="flex flex-col gap-3" data-testid="search-results">
+                {state.results.map((result) => (
+                  <ResultCard
+                    key={result.canonical_product.id}
+                    result={result}
+                    zoneId={zoneId}
+                  />
+                ))}
+              </div>
+            ) : (
+              <p
+                className="text-sm text-muted-foreground"
+                role="status"
+                aria-live="polite"
+                data-testid="search-no-canonical"
+              >
+                Sin resultados comparados entre tiendas; abajo está lo hallado
+                por cada tienda.
+              </p>
+            )}
+
+            <RawResultsSection rawResults={state.rawResults} zoneId={zoneId} />
           </div>
         )}
       </CardContent>

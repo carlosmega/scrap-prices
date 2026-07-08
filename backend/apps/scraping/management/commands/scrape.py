@@ -27,7 +27,7 @@ from collections.abc import Callable
 
 from django.core.management.base import BaseCommand, CommandError
 
-from apps.geo.models import Retailer, RetailerLocation, Zone, ZoneLocationMap
+from apps.geo.models import Retailer, RetailerLocation, Zone
 from apps.scraping import services
 from apps.scraping.base import BaseRetailerAdapter, RawPrice
 from apps.scraping.construrama import ConstruramaAdapter
@@ -147,26 +147,19 @@ class Command(BaseCommand):
     def _resolver_primary_location(self, retailer: Retailer, zone: Zone) -> RetailerLocation:
         """Devuelve la `RetailerLocation` primaria del retailer que sirve la zona.
 
-        La sirve el `ZoneLocationMap` con `is_primary=True` cuya ubicación es del
-        retailer pedido. Si no hay ninguna, es un error de datos (no de programa):
-        `CommandError` con mensaje claro, no un stacktrace.
+        La resolución vive en `services.resolver_primary_location` (F033: la
+        comparte con la búsqueda en vivo). Si no hay ninguna, es un error de
+        datos (no de programa): `CommandError` con mensaje claro, no un
+        stacktrace.
         """
-        mapping = (
-            ZoneLocationMap.objects.select_related("retailer_location")
-            .filter(
-                zone=zone,
-                is_primary=True,
-                retailer_location__retailer=retailer,
-            )
-            .first()
-        )
-        if mapping is None:
+        location = services.resolver_primary_location(retailer, zone)
+        if location is None:
             raise CommandError(
                 f"No hay una RetailerLocation primaria de '{retailer.slug}' que "
                 f"sirva la zona '{zone.slug}' (falta un ZoneLocationMap is_primary). "
                 "Revisa el mapeo de la zona o corre `manage.py seed`."
             )
-        return mapping.retailer_location
+        return location
 
     # -- modos ---------------------------------------------------------------
     def _ejecutar_dry_run(

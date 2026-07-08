@@ -47,6 +47,16 @@ env = environ.Env(
     CONSTRURAMA_ALGOLIA_APP_ID=(str, "NJVY3EU5DW"),
     CONSTRURAMA_ALGOLIA_INDEX=(str, "construrama_mx"),
     CONSTRURAMA_ALGOLIA_SEARCH_KEY=(str, ""),
+    # --- Búsqueda en vivo bajo demanda (F033) -------------------------------
+    # TTL de frescura: si NINGUNA observación del término+zona es más fresca que
+    # esto, la búsqueda dispara la corrida en vivo (live-on-miss).
+    SEARCH_LIVE_TTL_HOURS=(int, 24),
+    # Cooldown por término+zona+retailer: evita martillar términos sin
+    # resultados; aplica aunque la corrida previa hallara 0 items.
+    SEARCH_LIVE_COOLDOWN_MINUTES=(int, 15),
+    # Presupuesto TOTAL de la corrida en vivo (ambos retailers). Al vencer se
+    # responde con lo que haya (el retailer lento se reporta failed: timeout).
+    SEARCH_LIVE_TIMEOUT_SECONDS=(float, 25.0),
 )
 
 # Lee un .env de la raíz del backend si existe (no requerido).
@@ -119,6 +129,15 @@ DATABASES = {
     "default": env.db("DATABASE_URL"),
 }
 
+# F033: la base de TEST de SQLite va en ARCHIVO (no ":memory:"). La búsqueda en
+# vivo corre los retailers en hilos (ThreadPoolExecutor) y cada hilo abre su
+# propia conexión: con el ":memory:" compartido de Django los escritores
+# concurrentes chocan con locks de tabla (SQLITE_LOCKED, sin busy-timeout);
+# en archivo aplican los locks normales con busy-timeout. `*.sqlite3` está en
+# .gitignore y Django la crea/destruye en cada corrida de tests.
+if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+    DATABASES["default"].setdefault("TEST", {})["NAME"] = BASE_DIR / "test_db.sqlite3"
+
 # --- Validación de contraseñas ----------------------------------------------
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
@@ -168,3 +187,11 @@ SCRAPER_MAX_RETRIES = env.int("SCRAPER_MAX_RETRIES")
 CONSTRURAMA_ALGOLIA_APP_ID = env("CONSTRURAMA_ALGOLIA_APP_ID")
 CONSTRURAMA_ALGOLIA_INDEX = env("CONSTRURAMA_ALGOLIA_INDEX")
 CONSTRURAMA_ALGOLIA_SEARCH_KEY = env("CONSTRURAMA_ALGOLIA_SEARCH_KEY")
+
+# --- Búsqueda en vivo bajo demanda (F033) ------------------------------------
+# Gatillo live-on-miss de /api/search: TTL de frescura, cooldown por término+
+# zona+retailer y presupuesto total de la corrida. Env-overridables; los
+# defaults son los de la spec F033 (24 h / 15 min / 25 s).
+SEARCH_LIVE_TTL_HOURS = env.int("SEARCH_LIVE_TTL_HOURS")
+SEARCH_LIVE_COOLDOWN_MINUTES = env.int("SEARCH_LIVE_COOLDOWN_MINUTES")
+SEARCH_LIVE_TIMEOUT_SECONDS = env.float("SEARCH_LIVE_TIMEOUT_SECONDS")

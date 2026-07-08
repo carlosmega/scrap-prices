@@ -37,6 +37,16 @@ export default defineConfig({
       url: "http://127.0.0.1:8800/api/health",
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,
+      env: {
+        // F033: la búsqueda dispara scraping EN VIVO cuando no hay datos
+        // frescos para término+zona. En E2E eso jamás debe ocurrir (suite
+        // offline): el seed deja los términos buscados frescos, y este TTL
+        // enorme blinda además el caso de un backend reusado entre corridas
+        // (reuseExistingServer) cuyo seed corrió hace días. OJO: no protege
+        // términos SIN ninguna observación — ningún test E2E debe buscar
+        // términos fuera del seed.
+        SEARCH_LIVE_TTL_HOURS: "876000",
+      },
     },
     {
       // Frontend Next.js en modo dev.

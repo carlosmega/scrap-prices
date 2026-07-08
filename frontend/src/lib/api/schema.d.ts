@@ -93,9 +93,13 @@ export interface paths {
         };
         /**
          * Buscar
-         * @description Busca canónicos por `q` con su precio más fresco por retailer en la zona.
+         * @description Busca `q` en la zona: canónicos comparados + crudos por tienda (F033).
          *
-         *     404 si `zone_id` no existe o está inactiva (el service devuelve None).
+         *     BREAKING F033: la respuesta pasa de lista a objeto (`SearchOut`). Con
+         *     `live=auto` (default), si no hay datos frescos para `q`+zona el service
+         *     consulta ambos retailers EN VIVO (puede tardar hasta ~25 s), ingesta y
+         *     responde; `live=never` desactiva el vivo. 404 si `zone_id` no existe o
+         *     está inactiva (el service devuelve None).
          */
         get: operations["apps_catalog_api_buscar"];
         put?: never;
@@ -303,6 +307,42 @@ export interface components {
             mass_kg?: string | null;
         };
         /**
+         * LiveRetailerStatusOut
+         * @description Cómo le fue a UN retailer en la corrida en vivo (F033).
+         *
+         *     `detail` es un motivo breve legible (jamás un stacktrace): por qué se
+         *     bloqueó, falló u omitió. `ok` con `items_found=0` significa "consultado
+         *     con éxito pero sin hallazgos".
+         */
+        LiveRetailerStatusOut: {
+            /** Retailer Slug */
+            retailer_slug: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "ok" | "failed" | "blocked" | "skipped";
+            /**
+             * Items Found
+             * @default 0
+             */
+            items_found: number;
+            /** Detail */
+            detail?: string | null;
+        };
+        /**
+         * LiveSearchInfoOut
+         * @description Info de la corrida en vivo que acompañó a la búsqueda (F033).
+         */
+        LiveSearchInfoOut: {
+            /** Triggered */
+            triggered: boolean;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Retailers */
+            retailers: components["schemas"]["LiveRetailerStatusOut"][];
+        };
+        /**
          * PriceByRetailerOut
          * @description Precio más fresco de un retailer para un canónico en una zona.
          *
@@ -348,6 +388,52 @@ export interface components {
             price_per_kg?: string | null;
         };
         /**
+         * RawRetailerResultOut
+         * @description Un hallazgo CRUDO de una tienda, aún sin matchear a un canónico (F033).
+         *
+         *     Es un `RetailerProduct` sin `canonical_product` cuyo `raw_name` matchea `q`
+         *     (acento-insensible), con su observación más fresca en la zona. El precio es
+         *     NATIVO en la unidad del retailer (`sale_unit`, None = desconocida): NO es
+         *     comparable cross-retailer hasta curarse en Admin (matching manual, PRD D1).
+         *     `price` va como float por contrato F033 (dato informativo, no monetario
+         *     exacto como los Decimal de `PriceByRetailerOut`).
+         */
+        RawRetailerResultOut: {
+            /** Retailer Slug */
+            retailer_slug: string;
+            /** Retailer Name */
+            retailer_name: string;
+            /**
+             * Retailer Product Id
+             * Format: uuid
+             */
+            retailer_product_id: string;
+            /** External Sku */
+            external_sku: string;
+            /** Raw Name */
+            raw_name: string;
+            /** Url */
+            url?: string | null;
+            /** Brand */
+            brand?: string | null;
+            /** Sale Unit */
+            sale_unit?: string | null;
+            /** Price */
+            price: number;
+            /**
+             * Currency
+             * @default MXN
+             */
+            currency: string;
+            /** Is Available */
+            is_available: boolean;
+            /**
+             * Captured At
+             * Format: date-time
+             */
+            captured_at: string;
+        };
+        /**
          * RetailerRefOut
          * @description Referencia mínima a un retailer dentro de un precio.
          */
@@ -356,6 +442,23 @@ export interface components {
             slug: string;
             /** Name */
             name: string;
+        };
+        /**
+         * SearchOut
+         * @description Respuesta completa de `/api/search` (F033, BREAKING: lista → objeto).
+         *
+         *     - `results`: canónicos comparados (idéntico al contrato F015/F031).
+         *     - `raw_results`: hallazgos por tienda sin matchear (orden retailer →
+         *       precio asc, tope 50).
+         *     - `live`: info de la corrida en vivo; null si NO se disparó (datos frescos,
+         *       `live=never`, `q` corto o cooldown).
+         */
+        SearchOut: {
+            /** Results */
+            results: components["schemas"]["SearchResultOut"][];
+            /** Raw Results */
+            raw_results: components["schemas"]["RawRetailerResultOut"][];
+            live?: components["schemas"]["LiveSearchInfoOut"] | null;
         };
         /**
          * SearchResultOut
@@ -659,6 +762,7 @@ export interface operations {
                 q: string;
                 zone_id: string;
                 sort?: string;
+                live?: "auto" | "never";
             };
             header?: never;
             path?: never;
@@ -672,7 +776,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["SearchResultOut"][];
+                    "application/json": components["schemas"]["SearchOut"];
                 };
             };
         };

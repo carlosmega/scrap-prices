@@ -1,27 +1,38 @@
 "use client";
 
 /**
- * Hook client-side de la búsqueda (F020). Orquesta query + orden + zona y expone
- * los estados que exige la convención: inicial / cargando / error / vacío /
- * datos. El `fetch` real vive en `lib/api/client.ts` vía `fetchSearch`.
+ * Hook client-side de la búsqueda (F020 + F033). Orquesta query + orden + zona
+ * y expone los estados que exige la convención: inicial / cargando / error /
+ * vacío / datos. El `fetch` real vive en `lib/api/client.ts` vía `fetchSearch`.
  *
  * - Sin zona seleccionada NO busca (la UI invita a elegir zona).
  * - La búsqueda se dispara explícitamente (`submit`) y se re-ejecuta al cambiar
  *   el orden si ya hay un término activo, sin perder los resultados.
  * - Una "generación" monótona evita condiciones de carrera: solo la respuesta de
  *   la última petición disparada actualiza el estado.
+ *
+ * F033: la respuesta es el objeto `SearchOut` — además de los canónicos
+ * comparados (`results`) trae los hallazgos crudos por tienda (`rawResults`) y
+ * la info de la corrida en vivo (`live`, null si no se disparó). "Vacío" es
+ * ahora "ni canónicos NI crudos"; `live` se conserva también en vacío para que
+ * la UI pueda explicar qué pasó con cada tienda (p.ej. bloqueada).
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { fetchSearch, type SearchSort } from "../api";
-import type { SearchResult } from "../types";
+import type { LiveInfo, RawResult, SearchResult } from "../types";
 
 /** Estado de la búsqueda tal como lo consume la UI. */
 export type SearchState =
   | { status: "idle" }
   | { status: "loading" }
-  | { status: "ready"; results: SearchResult[] }
-  | { status: "empty" }
+  | {
+      status: "ready";
+      results: SearchResult[];
+      rawResults: RawResult[];
+      live: LiveInfo | null;
+    }
+  | { status: "empty"; live: LiveInfo | null }
   | { status: "error"; message: string };
 
 export interface UseSearch {
@@ -63,14 +74,20 @@ export function useSearch(zoneId: string | null): UseSearch {
       setState({ status: "loading" });
 
       fetchSearch(trimmed, zoneId, order)
-        .then((results) => {
+        .then((data) => {
           if (current !== generation.current) {
             return;
           }
+          const live = data.live ?? null;
           setState(
-            results.length === 0
-              ? { status: "empty" }
-              : { status: "ready", results }
+            data.results.length === 0 && data.raw_results.length === 0
+              ? { status: "empty", live }
+              : {
+                  status: "ready",
+                  results: data.results,
+                  rawResults: data.raw_results,
+                  live,
+                }
           );
         })
         .catch((error: unknown) => {
